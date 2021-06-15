@@ -7,3 +7,13 @@ mod tests {
 }
 
 mod net;
+
+pub struct Error {
+    net_err: Option<reqwest::Error>,
+}
+
+impl Error {
+    pub fn is_net(&self) -> bool {
+        self.net_err.is_some()
+    }
+}
