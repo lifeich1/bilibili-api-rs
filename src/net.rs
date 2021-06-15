@@ -25,7 +25,13 @@ mod tests {
         println!("Req: {:?}", req);
         let resp = req.send().await?;
         assert_eq!(resp.status(), reqwest::StatusCode::OK);
-        println!("Body: {}", resp.text().await?);
+        let j = resp.json::<serde_json::Value>().await?;
+        if let serde_json::Value::Object(o) = j {
+            println!("Body: {:?}\n", o);
+        } else {
+            println!("Body: {}\n", j);
+            panic!("body is not normal json response.");
+        }
 
         Ok(())
     }
