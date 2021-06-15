@@ -1,16 +1,17 @@
-pub fn new_client() -> reqwest::Result<reqwest::Client> {
-    reqwest::ClientBuilder::new()
+pub fn new_client() -> crate::Result<reqwest::Client> {
+    Ok(reqwest::ClientBuilder::new()
         .user_agent("Mozilla/5.0")
         .referer(false)
         .default_headers({
             let mut hdrs = reqwest::header::HeaderMap::new();
-            hdrs.insert("Referer", reqwest::header::HeaderValue::from_static("https://www.bilibili.com"));
+            hdrs.insert(
+                "Referer",
+                reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
+            );
             hdrs
         })
-        .build()
+        .build()?)
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -18,7 +19,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
-    async fn real_test_1n_get_video_info() -> reqwest::Result<()> {
+    async fn real_test_1n_get_video_info() -> crate::Result<()> {
         let req = new_client()?
             .get("https://api.bilibili.com/x/web-interface/view")
             .query(&[("bvid", "BV1uv411q7Mv")]);
@@ -37,7 +38,7 @@ mod tests {
     }
 
     #[test]
-    fn test_new_client() -> Result<(), reqwest::Error> {
+    fn test_new_client() -> crate::Result<()> {
         new_client()?;
         Ok(())
     }
