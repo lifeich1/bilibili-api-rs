@@ -24,7 +24,7 @@ mod tests {
             .query(&[("bvid", "BV1uv411q7Mv")]);
         println!("Req: {:?}", req);
         let resp = req.send().await?;
-        assert_eq!(resp.status(), 200);
+        assert_eq!(resp.status(), reqwest::StatusCode::OK);
         println!("Body: {}", resp.text().await?);
 
         Ok(())
