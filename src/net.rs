@@ -1,4 +1,4 @@
-pub fn new_client() -> Result<reqwest::Client, reqwest::Error> {
+pub fn new_client() -> reqwest::Result<reqwest::Client> {
     reqwest::ClientBuilder::new()
         .user_agent("Mozilla/5.0")
         .referer(false)
@@ -18,7 +18,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
-    async fn real_test_1n_get_video_info() -> Result<(), reqwest::Error> {
+    async fn real_test_1n_get_video_info() -> reqwest::Result<()> {
         let req = new_client()?
             .get("https://api.bilibili.com/x/web-interface/view")
             .query(&[("bvid", "BV1uv411q7Mv")]);
