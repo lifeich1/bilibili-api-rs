@@ -1,15 +1,30 @@
-use lazy_static::lazy_static;
+#[derive(Debug)]
+pub enum ErrorKind {
+    Network,
+    Remote(String),
+}
 
 #[derive(Debug)]
 pub struct Error {
+    kind: ErrorKind,
     net: Option<reqwest::Error>,
 }
 
-lazy_static! {
-    static ref NIL_ERROR: Error = Error { net: None };
-}
-
 impl Error {
+    pub fn new() -> Self {
+        Self {
+            net: None,
+            kind: ErrorKind::Network,
+        }
+    }
+
+    pub fn remote_err(detail: &str) -> Self {
+        Self {
+            kind: ErrorKind::Remote(String::from(detail)),
+            ..Self::new()
+        }
+    }
+
     pub fn is_net(&self) -> bool {
         self.net.is_some()
     }
@@ -23,7 +38,7 @@ impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
         Self {
             net: Some(error),
-            ..*NIL_ERROR
+            ..Self::new()
         }
     }
 }
