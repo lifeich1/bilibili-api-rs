@@ -1,5 +1,6 @@
 use crate::error::Error;
 
+#[derive(Clone)]
 pub struct MethodDispatcher(reqwest::Client);
 
 impl MethodDispatcher {
@@ -83,7 +84,7 @@ mod tests {
     #[ignore]
     async fn real_test_1n_get_video_info() -> crate::Result<()> {
         let j = new_net_context()?
-            .get("https://api.bilibili.com/x/web-interface/view")
+            .method("GET", "https://api.bilibili.com/x/web-interface/view")
             .query(&[("bvid", "BV1uv411q7Mv")])
             .api_call()
             .result()

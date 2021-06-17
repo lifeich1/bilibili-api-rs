@@ -14,7 +14,7 @@ impl Error {
 
     pub fn is_network(&self) -> bool {
         match self {
-            Self::Network(e) => true,
+            Self::Network(_) => true,
             _ => false,
         }
     }

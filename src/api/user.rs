@@ -19,7 +19,7 @@ impl User {
 
     pub async fn get_info(&self) -> net::RetValue {
         Ok(self.ctx.api(api_info::user::get("info/info"))
-            .query(&[("uid", &self.uid)])
+            .query(&[("mid", &self.uid)])
             .api_call()
             .result()
             .await?)

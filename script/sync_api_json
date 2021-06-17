@@ -1,4 +1,4 @@
-#!/usr/bin/env make -f
+#!/usr/bin/make -f
 #
 # A helper script to sync crate's api info with Passkou/bilibili-api.
 # *NOTE*: Must check PASSKOU_BILIBILI_API_REPO_HOME first.
