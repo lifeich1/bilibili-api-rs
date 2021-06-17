@@ -14,10 +14,10 @@ impl MethodDispatcher {
     pub fn api(&self, info: &serde_json::Value) -> reqwest::RequestBuilder {
         let method = info["method"]
             .as_str()
-            .expect(&format!("net: api info invalid method: {:?}", info));
+            .expect(&format!("net: api info invalid method: {}", info));
         let url = info["url"]
             .as_str()
-            .expect(&format!("net: api info invalid method: {:?}", info));
+            .expect(&format!("net: api info invalid url: {}", info));
         self.method(method, url)
     }
 }
