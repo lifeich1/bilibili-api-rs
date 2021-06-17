@@ -1,7 +1,7 @@
+pub mod api;
 mod api_info;
 pub mod error;
 mod net;
-pub mod api;
 
 pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
@@ -12,6 +12,8 @@ pub struct NetContext {
 
 impl NetContext {
     pub fn new() -> crate::Result<Self> {
-        Ok(Self { ctx: net::new_net_context()? })
+        Ok(Self {
+            ctx: net::new_net_context()?,
+        })
     }
 }

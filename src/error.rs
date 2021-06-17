@@ -5,11 +5,9 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn remote_err<T>(msg: T) -> Self
-    where
-        String: From<T>,
+    pub fn remote_err<T: ToString>(msg: T) -> Self
     {
-        Self::Remote(String::from(msg))
+        Self::Remote(msg.to_string())
     }
 
     pub fn is_network(&self) -> bool {

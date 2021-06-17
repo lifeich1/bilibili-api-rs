@@ -4,8 +4,7 @@ use crate::error::Error;
 pub struct MethodDispatcher(reqwest::Client);
 
 impl MethodDispatcher {
-    fn method(&self, method: &str, url: &str) -> reqwest::RequestBuilder
-    {
+    fn method(&self, method: &str, url: &str) -> reqwest::RequestBuilder {
         match method {
             "GET" => self.0.get(url),
             _ => panic!("net: unimplemented method: {}", method),
@@ -13,25 +12,31 @@ impl MethodDispatcher {
     }
 
     pub fn api(&self, info: &serde_json::Value) -> reqwest::RequestBuilder {
-        let method = info["method"].as_str().expect(&format!("net: api info invalid method: {:?}", info));
-        let url = info["url"].as_str().expect(&format!("net: api info invalid method: {:?}", info));
+        let method = info["method"]
+            .as_str()
+            .expect(&format!("net: api info invalid method: {:?}", info));
+        let url = info["url"]
+            .as_str()
+            .expect(&format!("net: api info invalid method: {:?}", info));
         self.method(method, url)
     }
 }
 
 pub fn new_net_context() -> crate::Result<MethodDispatcher> {
-    Ok(MethodDispatcher(reqwest::ClientBuilder::new()
-        .user_agent("Mozilla/5.0")
-        .referer(false)
-        .default_headers({
-            let mut hdrs = reqwest::header::HeaderMap::new();
-            hdrs.insert(
-                "Referer",
-                reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
-            );
-            hdrs
-        })
-        .build()?))
+    Ok(MethodDispatcher(
+        reqwest::ClientBuilder::new()
+            .user_agent("Mozilla/5.0")
+            .referer(false)
+            .default_headers({
+                let mut hdrs = reqwest::header::HeaderMap::new();
+                hdrs.insert(
+                    "Referer",
+                    reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
+                );
+                hdrs
+            })
+            .build()?,
+    ))
 }
 
 pub struct NetApiCall {
