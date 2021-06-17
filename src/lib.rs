@@ -5,6 +5,7 @@ pub mod api;
 
 pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
+#[derive(Clone)]
 pub struct NetContext {
     ctx: net::MethodDispatcher,
 }
