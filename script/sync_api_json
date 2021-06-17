@@ -1,0 +1,29 @@
+#!/usr/bin/env make -f
+#
+# A helper script to sync crate's api info with Passkou/bilibili-api.
+# *NOTE*: Must check PASSKOU_BILIBILI_API_REPO_HOME first.
+
+
+PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../Passkou/bilibili-api)
+
+bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
+O := src/api_info
+M4 := m4 -P
+FMT := vim -c "execute \"normal gg=G\"|wq"
+RFMT := rustfmt
+
+api_info_types := live user video
+api_info_outputs := $(api_info_types:%=$(O)/%.rs)
+
+
+PHONY := all
+all: $(api_info_outputs)
+
+$(api_info_outputs): $(O)/%.rs : $(bapi_info_root)/%.json
+	$(M4) .m4/wrap_json.m4 $< > $@
+	$(RFMT) $@
+	$(FMT) $@
+
+
+
+.PHONY: $(PHONY)

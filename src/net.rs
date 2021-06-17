@@ -1,7 +1,25 @@
 use crate::error::Error;
 
-pub fn new_client() -> crate::Result<reqwest::Client> {
-    Ok(reqwest::ClientBuilder::new()
+pub struct MethodDispatcher(reqwest::Client);
+
+impl MethodDispatcher {
+    fn method(&self, method: &str, url: &str) -> reqwest::RequestBuilder
+    {
+        match method {
+            "GET" => self.0.get(url),
+            _ => panic!("net: unimplemented method: {}", method),
+        }
+    }
+
+    pub fn api(&self, info: serde_json::Value) -> reqwest::RequestBuilder {
+        let method = info["method"].as_str().expect(&format!("net: api info invalid method: {:?}", info));
+        let url = info["url"].as_str().expect(&format!("net: api info invalid method: {:?}", info));
+        self.method(method, url)
+    }
+}
+
+pub fn new_net_context() -> crate::Result<MethodDispatcher> {
+    Ok(MethodDispatcher(reqwest::ClientBuilder::new()
         .user_agent("Mozilla/5.0")
         .referer(false)
         .default_headers({
@@ -12,7 +30,7 @@ pub fn new_client() -> crate::Result<reqwest::Client> {
             );
             hdrs
         })
-        .build()?)
+        .build()?))
 }
 
 pub struct NetApiCall {
@@ -29,8 +47,10 @@ impl NetApi for reqwest::RequestBuilder {
     }
 }
 
+pub type RetValue = crate::Result<serde_json::Value>;
+
 impl NetApiCall {
-    pub async fn result(self) -> crate::Result<serde_json::Value> {
+    pub async fn result(self) -> RetValue {
         let mut resp = self.req.send().await?.json::<serde_json::Value>().await?;
         if let Some(code) = resp["code"].as_i64() {
             if code != 0 {
@@ -62,7 +82,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn real_test_1n_get_video_info() -> crate::Result<()> {
-        let j = new_client()?
+        let j = new_net_context()?
             .get("https://api.bilibili.com/x/web-interface/view")
             .query(&[("bvid", "BV1uv411q7Mv")])
             .api_call()
@@ -75,8 +95,8 @@ mod tests {
     }
 
     #[test]
-    fn test_new_client() -> crate::Result<()> {
-        new_client()?;
+    fn test_new_net_context() -> crate::Result<()> {
+        new_net_context()?;
         Ok(())
     }
 }
