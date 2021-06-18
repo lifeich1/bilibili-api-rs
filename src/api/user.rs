@@ -8,8 +8,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn new<T: ToString>(n: &NetContext, uid: T) -> Self
-    {
+    pub fn new<T: ToString>(n: &NetContext, uid: T) -> Self {
         Self {
             uid: uid.to_string(),
             ctx: n.ctx.clone(),

@@ -5,8 +5,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn remote_err<T: ToString>(msg: T) -> Self
-    {
+    pub fn remote_err<T: ToString>(msg: T) -> Self {
         Self::Remote(msg.to_string())
     }
 
