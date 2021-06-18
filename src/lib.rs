@@ -16,4 +16,8 @@ impl NetContext {
             ctx: net::new_net_context()?,
         })
     }
+
+    pub fn new_user<T: ToString>(&self, uid: T) -> api::User {
+        api::User::new(self, uid)
+    }
 }
