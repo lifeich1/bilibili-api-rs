@@ -110,12 +110,16 @@ mod tests {
     #[test]
     #[should_panic(expected = "net: api info wrong/path invalid method:")]
     fn test_panic_api_info_invalid_method() {
-        let _ = new_net_context().unwrap().api((&serde_json::Value::Null, "wrong/path"));
+        let _ = new_net_context()
+            .unwrap()
+            .api((&serde_json::Value::Null, "wrong/path"));
     }
 
     #[test]
     #[should_panic(expected = "net: api info wrong/path invalid url:")]
     fn test_panic_api_info_invalid_url() {
-        let _ = new_net_context().unwrap().api((&serde_json::json!({"method":"GET"}), "wrong/path"));
+        let _ = new_net_context()
+            .unwrap()
+            .api((&serde_json::json!({"method":"GET"}), "wrong/path"));
     }
 }
