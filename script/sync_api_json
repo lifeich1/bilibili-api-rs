@@ -9,7 +9,7 @@ PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../Passkou/bilibili-api)
 bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
 O := src/api_info
 M4 := m4 -P
-FMT := vim -c "execute \"normal gg=G\"|wq"
+FMT := vim -c "execute \"%s/\\r//g\"|execute \"normal gg=G\"|wq"
 RFMT := rustfmt
 
 api_info_types := live user video

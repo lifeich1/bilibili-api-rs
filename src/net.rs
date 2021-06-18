@@ -11,13 +11,14 @@ impl MethodDispatcher {
         }
     }
 
-    pub fn api(&self, info: &serde_json::Value) -> reqwest::RequestBuilder {
+    pub fn api(&self, infotup: (&serde_json::Value, &str)) -> reqwest::RequestBuilder {
+        let (info, path) = infotup;
         let method = info["method"]
             .as_str()
-            .expect(&format!("net: api info invalid method: {}", info));
+            .expect(&format!("net: api info {} invalid method: {}", path, info));
         let url = info["url"]
             .as_str()
-            .expect(&format!("net: api info invalid url: {}", info));
+            .expect(&format!("net: api info {} invalid url: {}", path, info));
         self.method(method, url)
     }
 }

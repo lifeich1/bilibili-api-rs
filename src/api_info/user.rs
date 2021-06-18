@@ -240,12 +240,6 @@ lazy_static! {
     });
 }
 
-pub fn get_str(path: &str) -> &str {
-    DATA.get_from_path(path)
-        .as_str()
-        .expect(&format!("api_info: path invalid: {}", path))
-}
-
-pub fn get(path: &str) -> &serde_json::Value {
-    DATA.get_from_path(path)
+pub fn get(path: &str) -> (&serde_json::Value, &str) {
+    (DATA.get_from_path(path), path)
 }

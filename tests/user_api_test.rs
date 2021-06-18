@@ -2,7 +2,7 @@ use bilibili_api_rs::{api, NetContext, Result as ApiResult};
 
 #[tokio::test]
 #[ignore]
-async fn get_info() -> ApiResult<()> {
+async fn user_api_test() -> ApiResult<()> {
     let n = NetContext::new()?;
     let u = api::User::new(&n, 15810);
     let v = u.get_info().await?;

@@ -9,11 +9,7 @@ m4_divert(1)m4_dnl
 );
 }
 
-pub fn get_str(path: &str) -> &str {
-    DATA.get_from_path(path).as_str().expect(&format!("api_info: path invalid: {}", path))
-}
-
-pub fn get(path: &str) -> &serde_json::Value {
-    DATA.get_from_path(path)
+pub fn get(path: &str) -> (&serde_json::Value, &str) {
+    (DATA.get_from_path(path), path)
 }
 m4_divert(0)m4_dnl
