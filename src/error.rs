@@ -1,3 +1,6 @@
+use std::error::Error as StdError;
+use std::fmt;
+
 #[derive(Debug)]
 pub enum Error {
     Network(reqwest::Error),
@@ -27,5 +30,23 @@ impl Error {
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
         Self::Network(error)
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        match self {
+            Self::Network(e) => e.fmt(f),
+            Self::Remote(s) => write!(f, "Remote: {}", &s),
+        }
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Self::Network(e) => e.source(),
+            _ => None,
+        }
     }
 }
