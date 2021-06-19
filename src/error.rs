@@ -13,10 +13,7 @@ impl Error {
     }
 
     pub fn is_network(&self) -> bool {
-        match self {
-            Self::Network(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Network(_))
     }
 
     pub fn as_network(&self) -> Option<&reqwest::Error> {

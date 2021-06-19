@@ -15,10 +15,10 @@ impl MethodDispatcher {
         let (info, path) = infotup;
         let method = info["method"]
             .as_str()
-            .expect(&format!("net: api info {} invalid method: {}", path, info));
+            .unwrap_or_else(|| panic!("net: api info {} invalid method: {}", path, info));
         let url = info["url"]
             .as_str()
-            .expect(&format!("net: api info {} invalid url: {}", path, info));
+            .unwrap_or_else(|| panic!("net: api info {} invalid url: {}", path, info));
         self.method(method, url)
     }
 }
@@ -63,7 +63,7 @@ impl NetApiCall {
             if code != 0 {
                 let msg = resp["msg"]
                     .as_str()
-                    .or(resp["message"].as_str())
+                    .or_else(|| resp["message"].as_str())
                     .unwrap_or("detail missed");
                 Err(Error::remote_err(format!(
                     "api return code {}: {}",
