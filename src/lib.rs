@@ -6,14 +6,14 @@ mod net;
 pub type Result<T> = std::result::Result<T, crate::error::Error>;
 
 #[derive(Clone)]
-pub struct NetContext {
-    ctx: net::MethodDispatcher,
+pub struct Context {
+    net: net::MethodDispatcher,
 }
 
-impl NetContext {
+impl Context {
     pub fn new() -> crate::Result<Self> {
         Ok(Self {
-            ctx: net::new_net_context()?,
+            net: net::new_net_context()?,
         })
     }
 
