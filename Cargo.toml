@@ -3,8 +3,9 @@ name = "bilibili-api-rs"
 version = "0.1.0"
 authors = ["lifeich1 <lintd23@outlook.com>"]
 edition = "2018"
+description = "A rust library project got inspiration from Passkou/bilibili-api"
+license = "WTFPL"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 reqwest = { version = "0.11", features = ["json"] }
