@@ -1,5 +1,6 @@
 pub mod user;
 
+use log::{debug, trace};
 use std::sync::Arc;
 
 use crate::error::{ApiError, ApiResult};
@@ -111,6 +112,7 @@ impl ApiRequest {
         if self.bufferable && !self.invalidate_flag {
             if let Some(v) = self.ctx.cacher.cache_get(&buffer_key) {
                 if let Ok(r) = serde_json::from_str(&v) {
+                    debug!("read cache {}", buffer_key);
                     return Ok(r);
                 }
             }
@@ -118,9 +120,11 @@ impl ApiRequest {
 
         let resp = self.ctx.net.execute(req)
             .await?.json::<serde_json::Value>().await?;
+        trace!("ok {}", buffer_key);
         let r = Self::filter_result(resp)?;
 
         if self.bufferable {
+            debug!("update cache {}", buffer_key);
             self.ctx.cacher.cache_store(&buffer_key, &r.to_string());
         }
 
@@ -209,7 +213,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new_http_client() -> crate::Result<()> {
+    fn test_new_http_client() -> crate::ApiResult<()> {
         new_http_client()?;
         Ok(())
     }
@@ -218,7 +222,7 @@ mod tests {
     #[should_panic(expected = "missed api info getter function")]
     fn test_panic_api_req_builder_not_set_api() {
         let n = crate::Context::new().unwrap();
-        let _ = ApiRequestBuilder::new(n)
+        let _ = ApiRequestBuilder::new(&n)
             .path("info/info");
     }
 
@@ -226,7 +230,7 @@ mod tests {
     #[should_panic(expected = "invalid api info at path bad/bad/bad")]
     fn test_panic_api_req_builder_wrong_path() {
         let n = crate::Context::new().unwrap();
-        let _ = ApiRequestBuilder::new(n)
+        let _ = ApiRequestBuilder::new(&n)
             .api(crate::api_info::user::get)
             .path("bad/bad/bad");
     }
