@@ -1,10 +1,9 @@
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
+use bevy::tasks::IoTaskPool;
 use tokio::runtime;
 use futures_lite::future;
 use crate::{ApiRequest, ApiResult};
-
-/// The module contain a helpful [`ApiRuntimePlugin`].
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {
