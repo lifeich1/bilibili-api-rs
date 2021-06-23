@@ -94,21 +94,6 @@ impl ApiRequestParamsBuilder {
     }
 }
 
-pub fn new_http_client() -> crate::ApiResult<reqwest::Client> {
-    Ok(reqwest::ClientBuilder::new()
-        .user_agent("Mozilla/5.0")
-        .referer(false)
-        .default_headers({
-            let mut hdrs = reqwest::header::HeaderMap::new();
-            hdrs.insert(
-                "Referer",
-                reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
-            );
-            hdrs
-        })
-        .build()?)
-}
-
 impl ApiRequest {
     /// Do async api query, filter api response to extract result data.
     /// Use buffer if it is possible
@@ -168,12 +153,6 @@ impl ApiRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_new_http_client() -> crate::Result<()> {
-        new_http_client()?;
-        Ok(())
-    }
 
     #[test]
     #[should_panic(expected = "missed api info getter function")]

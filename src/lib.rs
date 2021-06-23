@@ -2,7 +2,7 @@ pub mod api;
 mod api_info;
 pub mod cache;
 pub mod error;
-mod net;
+pub mod net;
 
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ pub struct Context {
 impl Context {
     pub fn new() -> crate::ApiResult<Self> {
         Ok(Self {
-            net: net::new_http_client()?,
+            net: new_http_client()?,
             cacher: Arc::new(cache::SimpleMemCacher::default()),
         })
     }
@@ -35,5 +35,32 @@ impl Context {
 
     fn req_build(&self) -> net::ApiRequestBuilder {
         net::ApiRequestBuilder::new(self)
+    }
+}
+
+
+fn new_http_client() -> crate::ApiResult<reqwest::Client> {
+    Ok(reqwest::ClientBuilder::new()
+        .user_agent("Mozilla/5.0")
+        .referer(false)
+        .default_headers({
+            let mut hdrs = reqwest::header::HeaderMap::new();
+            hdrs.insert(
+                "Referer",
+                reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
+            );
+            hdrs
+        })
+        .build()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_http_client() -> crate::Result<()> {
+        new_http_client()?;
+        Ok(())
     }
 }
