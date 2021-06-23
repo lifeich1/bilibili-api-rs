@@ -1,7 +1,9 @@
 use crate::api_info;
-use crate::net::ApiRequestBuilder;
 use crate::Context;
-use super::ApiCall;
+use crate::error::ApiResult;
+use crate::api::ApiRequest;
+
+use super::ApiRequestBuilder;
 
 pub struct User {
     ctx: Context,
@@ -22,14 +24,14 @@ impl User {
             .api(api_info::user::get)
     }
 
-    pub fn get_info(&self) -> ApiCall {
+    pub fn get_info(&self) -> ApiResult<ApiRequest> {
         self.rb()
             .path("info/info")
             .query(&[("mid", &self.uid)])
             .bufferable()
     }
 
-    pub fn video_list(&self, page_no: i32) -> ApiCall {
+    pub fn video_list(&self, page_no: i32) -> ApiResult<ApiRequest> {
         let pn = page_no.to_string();
         self.rb()
             .path("info/video")
