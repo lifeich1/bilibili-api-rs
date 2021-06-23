@@ -70,7 +70,7 @@ impl ApiRequestBuilder {
             _ => panic!("unimpl method {}", method),
         };
         ApiRequestParamsBuilder {
-            ctx: self.ctx.clone(),
+            ctx: self.ctx,
             builder,
         }
     }
