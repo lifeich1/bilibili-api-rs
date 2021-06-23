@@ -5,6 +5,11 @@ authors = ["lifeich1 <lintd23@outlook.com>"]
 edition = "2018"
 description = "A rust library project got inspiration from Passkou/bilibili-api"
 license = "WTFPL"
+repository = "https://github.com/lifeich1/bilibili-api-rs"
+exclude = ["/.m4", "/script"]
+categories = ["web-programming::http-client"]
+readme = "README.md"
+keywords = ["bilibili"]
 
 
 [dependencies]
