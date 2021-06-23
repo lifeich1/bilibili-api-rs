@@ -1,5 +1,6 @@
 use crate::api_info;
-use crate::net::{self, NetApi};
+use crate::net::ApiRequest;
+use crate::error::ApiResult;
 use crate::Context;
 
 pub struct User {
@@ -15,13 +16,11 @@ impl User {
         }
     }
 
-    pub async fn get_info(&self) -> net::RetValue {
-        self.ctx
-            .net
-            .api(api_info::user::get("info/info"))
+    pub fn get_info(&self) -> ApiResult<ApiRequest> {
+        self.ctx.req_build()
+            .api(api_info::user::get)
+            .path("info/info")
             .query(&[("mid", &self.uid)])
-            .api_call()
-            .result()
-            .await
+            .bufferable()
     }
 }

@@ -23,9 +23,8 @@ async fn user_api_async_test() -> ApiResult<()> {
     assert_eq!(v["name"].as_str().unwrap(), "RemediosShio");
 
     // Should invalidate buffer, but hard to check
-    u.get_info().invalidate();
 
-    let v = u.get_info().query().await?;
+    let v = u.get_info().invalidate().query().await?;
     assert_eq!(v["mid"].as_i64().unwrap(), 10592068);
     assert_eq!(v["name"].as_str().unwrap(), "RemediosShio");
 

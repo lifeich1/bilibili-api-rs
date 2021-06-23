@@ -1,71 +1,148 @@
-use crate::error::Error;
+use crate::error::{ApiError, ApiResult};
+use serde::Serialize;
 
-#[derive(Clone)]
-pub struct MethodDispatcher(reqwest::Client);
+pub struct ApiRequestBuilder {
+    ctx: crate::Context,
+    api_info_getter: Option<fn(&str) -> &serde_json::Value>,
+}
 
-impl MethodDispatcher {
-    fn method(&self, method: &str, url: &str) -> reqwest::RequestBuilder {
-        match method {
-            "GET" => self.0.get(url),
-            _ => panic!("net: unimplemented method: {}", method),
+pub struct ApiRequestParamsBuilder {
+    ctx: crate::Context,
+    builder: reqwest::RequestBuilder,
+}
+
+pub struct ApiRequest {
+    ctx: crate::Context,
+    builder: Option<reqwest::RequestBuilder>,
+    bufferable: bool,
+    invalidate_flag: bool,
+}
+
+impl ApiRequestBuilder {
+    /// Create new ApiRequestBuilder, clone reqwest::Client
+    pub fn new(ctx: &crate::Context) -> Self {
+        Self {
+            ctx: ctx.clone(),
+            api_info_getter: None,
         }
     }
 
-    pub fn api(&self, infotup: (&serde_json::Value, &str)) -> reqwest::RequestBuilder {
-        let (info, path) = infotup;
-        let method = info["method"]
-            .as_str()
-            .unwrap_or_else(|| panic!("net: api info {} invalid method: {}", path, info));
-        let url = info["url"]
-            .as_str()
-            .unwrap_or_else(|| panic!("net: api info {} invalid url: {}", path, info));
-        self.method(method, url)
+    /// Assign api info get function pointer
+    pub fn api(mut self, f: fn(&str) -> &serde_json::Value) -> Self {
+        self.api_info_getter = Some(f);
+        self
+    }
+
+    /// Transform to ApiRequestParamsBuilder from api info path
+    ///
+    /// Require call method `api()` first. If not will panic.
+    pub fn path<T: ToString>(self, p: T) -> ApiRequestParamsBuilder {
+        let method_path = format!("{}/method", p.to_string());
+        let url_path = format!("{}/url", p.to_string());
+        self.path2(method_path, url_path)
+    }
+
+    pub fn path2<T: ToString, U: ToString>(self, method_path: T, url_path: U) -> ApiRequestParamsBuilder {
+        let mpath = method_path.to_string();
+        let upath = url_path.to_string();
+        let method = self.get_from_path(&mpath);
+        let url = self.get_from_path(&upath);
+        self.into_params_builder(method, url)
+    }
+
+    fn get_from_path<'a>(&self, path: &'a str) -> &'a str {
+        let getter = self.api_info_getter.expect("missed api info getter function");
+        getter(path).as_str().unwrap_or_else(|| panic!("invalid api info at path {}", path))
+    }
+
+    /// Create ApiRequestParamsBuilder from method and url.
+    fn into_params_builder(self, method: &str, url: &str) -> ApiRequestParamsBuilder {
+        let builder = match method {
+            "get" | "GET" => self.ctx.net.get(url),
+            _ => panic!("unimpl method {}", method),
+        };
+        ApiRequestParamsBuilder {
+            ctx: self.ctx.clone(),
+            builder,
+        }
     }
 }
 
-pub fn new_net_context() -> crate::Result<MethodDispatcher> {
-    Ok(MethodDispatcher(
-        reqwest::ClientBuilder::new()
-            .user_agent("Mozilla/5.0")
-            .referer(false)
-            .default_headers({
-                let mut hdrs = reqwest::header::HeaderMap::new();
-                hdrs.insert(
-                    "Referer",
-                    reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
-                );
-                hdrs
-            })
-            .build()?,
-    ))
-}
+impl ApiRequestParamsBuilder {
+    /// Pass parameters to `reqwest::RequestBuilder` .
+    pub fn query<T: Serialize + ?Sized>(mut self, query: &T) -> ApiRequestParamsBuilder {
+        self.builder = self.builder.query(query);
+        self
+    }
 
-pub struct NetApiCall {
-    req: reqwest::RequestBuilder,
-}
+    fn build(self, bufferable: bool) -> ApiResult<ApiRequest> {
+        Ok(ApiRequest {
+            ctx: self.ctx.clone(),
+            builder: Some(self.builder),
+            bufferable,
+            invalidate_flag: false,
+        })
+    }
 
-pub trait NetApi {
-    fn api_call(self) -> NetApiCall;
-}
+    /// Finish build progress.
+    pub fn bufferable(self) -> ApiResult<ApiRequest> {
+        self.build(true)
+    }
 
-impl NetApi for reqwest::RequestBuilder {
-    fn api_call(self) -> NetApiCall {
-        NetApiCall { req: self }
+    pub fn nobuffer(self) -> ApiResult<ApiRequest> {
+        self.build(false)
     }
 }
 
-pub type RetValue = crate::Result<serde_json::Value>;
+pub fn new_http_client() -> crate::ApiResult<reqwest::Client> {
+    Ok(reqwest::ClientBuilder::new()
+        .user_agent("Mozilla/5.0")
+        .referer(false)
+        .default_headers({
+            let mut hdrs = reqwest::header::HeaderMap::new();
+            hdrs.insert(
+                "Referer",
+                reqwest::header::HeaderValue::from_static("https://www.bilibili.com"),
+            );
+            hdrs
+        })
+        .build()?)
+}
 
-impl NetApiCall {
-    pub async fn result(self) -> RetValue {
-        let mut resp = self.req.send().await?.json::<serde_json::Value>().await?;
+impl ApiRequest {
+    /// Do async api query, filter api response to extract result data.
+    /// Use buffer if it is possible
+    pub async fn query(self) -> ApiResult<serde_json::Value> {
+        let req = self.builder.expect("request already consumed!").build()?;
+        let buffer_key = req.url().to_string();
+
+        if self.bufferable && !self.invalidate_flag {
+            if let Some(v) = self.ctx.cacher.cache_get(&buffer_key) {
+                if let Ok(r) = serde_json::from_str(&v) {
+                    return Ok(r);
+                }
+            }
+        }
+
+        let resp = self.ctx.net.execute(req)
+            .await?.json::<serde_json::Value>().await?;
+        let r = Self::filter_result(resp)?;
+
+        if self.bufferable {
+            self.ctx.cacher.cache_store(&buffer_key, &r.to_string());
+        }
+
+        Ok(r)
+    }
+
+    fn filter_result(mut resp: serde_json::Value) -> ApiResult<serde_json::Value> {
         if let Some(code) = resp["code"].as_i64() {
             if code != 0 {
                 let msg = resp["msg"]
                     .as_str()
                     .or_else(|| resp["message"].as_str())
                     .unwrap_or("detail missed");
-                Err(Error::remote_err(format!(
+                Err(ApiError::remote_err(format!(
                     "api return code {}: {}",
                     code, msg
                 )))
@@ -77,8 +154,14 @@ impl NetApiCall {
                 })
             }
         } else {
-            Err(Error::remote_err("api return code null"))
+            Err(ApiError::remote_err("api return code null"))
         }
+    }
+
+    /// Invalidate cache
+    pub fn invalidate(mut self) -> Self {
+        self.invalidate_flag = true;
+        self
     }
 }
 
@@ -86,40 +169,26 @@ impl NetApiCall {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    #[ignore]
-    async fn real_test_1n_get_video_info() -> crate::Result<()> {
-        let j = new_net_context()?
-            .method("GET", "https://api.bilibili.com/x/web-interface/view")
-            .query(&[("bvid", "BV1uv411q7Mv")])
-            .api_call()
-            .result()
-            .await?;
-        println!("data: {}\n", j.to_string());
-        assert!(!j.is_null());
-
+    #[test]
+    fn test_new_http_client() -> crate::Result<()> {
+        new_http_client()?;
         Ok(())
     }
 
     #[test]
-    fn test_new_net_context() -> crate::Result<()> {
-        new_net_context()?;
-        Ok(())
+    #[should_panic(expected = "missed api info getter function")]
+    fn test_panic_api_req_builder_not_set_api() {
+        let n = crate::Context::new().unwrap();
+        let _ = ApiRequestBuilder::new(n)
+            .path("info/info");
     }
 
     #[test]
-    #[should_panic(expected = "net: api info wrong/path invalid method:")]
-    fn test_panic_api_info_invalid_method() {
-        let _ = new_net_context()
-            .unwrap()
-            .api((&serde_json::Value::Null, "wrong/path"));
-    }
-
-    #[test]
-    #[should_panic(expected = "net: api info wrong/path invalid url:")]
-    fn test_panic_api_info_invalid_url() {
-        let _ = new_net_context()
-            .unwrap()
-            .api((&serde_json::json!({"method":"GET"}), "wrong/path"));
+    #[should_panic(expected = "invalid api info at path bad/bad/bad")]
+    fn test_panic_api_req_builder_wrong_path() {
+        let n = crate::Context::new().unwrap();
+        let _ = ApiRequestBuilder::new(n)
+            .api(crate::api_info::user::get)
+            .path("bad/bad/bad");
     }
 }

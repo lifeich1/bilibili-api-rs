@@ -9,7 +9,7 @@ m4_divert(1)m4_dnl
 );
 }
 
-pub fn get(path: &str) -> (&serde_json::Value, &str) {
-    (DATA.get_from_path(path), path)
+pub fn get(path: &str) -> &serde_json::Value {
+    DATA.get_from_path(path)
 }
 m4_divert(0)m4_dnl

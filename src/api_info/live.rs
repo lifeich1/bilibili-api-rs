@@ -164,6 +164,6 @@ lazy_static! {
     });
 }
 
-pub fn get(path: &str) -> (&serde_json::Value, &str) {
-    (DATA.get_from_path(path), path)
+pub fn get(path: &str) -> &serde_json::Value {
+    DATA.get_from_path(path)
 }

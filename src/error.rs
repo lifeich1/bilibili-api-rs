@@ -1,13 +1,15 @@
 use std::error::Error as StdError;
 use std::fmt;
 
+pub type ApiResult<T> = std::result::Result<T, crate::error::ApiError>;
+
 #[derive(Debug)]
-pub enum Error {
+pub enum ApiError {
     Network(reqwest::Error),
     Remote(String),
 }
 
-impl Error {
+impl ApiError {
     pub fn remote_err<T: ToString>(msg: T) -> Self {
         Self::Remote(msg.to_string())
     }
@@ -24,13 +26,13 @@ impl Error {
     }
 }
 
-impl From<reqwest::Error> for Error {
+impl From<reqwest::Error> for ApiError {
     fn from(error: reqwest::Error) -> Self {
         Self::Network(error)
     }
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Self::Network(e) => e.fmt(f),
@@ -39,7 +41,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl StdError for Error {
+impl StdError for ApiError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::Network(e) => e.source(),
