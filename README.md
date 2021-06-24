@@ -14,6 +14,4 @@ A rust library project got inspiration from [bilibili-api](https://github.com/Pa
 
 ## Features
 
-### plugin
-
-"plugin" feature enable a bevy plugin for helping emit api request as background task.
+- `plugin`: enable a bevy plugin for helping emit api request as background task.
