@@ -5,6 +5,7 @@ use crate::Context;
 
 use super::ApiRequestBuilder;
 
+/// User related APIs collection
 pub struct User {
     ctx: Context,
     uid: String,
@@ -22,6 +23,7 @@ impl User {
         self.ctx.req_build().api(api_info::user::get)
     }
 
+    /// Get user basic info.
     pub fn get_info(&self) -> ApiResult<ApiRequest> {
         self.rb()
             .path("info/info")
@@ -29,6 +31,7 @@ impl User {
             .bufferable()
     }
 
+    /// Fetch user's upload video list.
     pub fn video_list(&self, page_no: i32) -> ApiResult<ApiRequest> {
         let pn = page_no.to_string();
         self.rb()

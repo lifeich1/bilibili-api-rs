@@ -2,8 +2,8 @@ use crate::{ApiRequest, ApiResult};
 use bevy::prelude::*;
 use bevy::tasks::TaskPool;
 use futures_lite::future;
-use tokio::runtime;
 use std::ops::Deref;
+use tokio::runtime;
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {

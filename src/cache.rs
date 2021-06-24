@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+/// Cache interface that crate used.
+///
+/// Note: must implement it with multi-thread safety.
 pub trait Cacher {
     fn cache_store(&self, key: &str, val: &str);
     fn cache_get(&self, key: &str) -> Option<String>;
@@ -8,7 +11,7 @@ pub trait Cacher {
 
 #[derive(Default)]
 pub struct SimpleMemCacher {
-    map: Mutex<HashMap<String, String>>,
+    pub map: Mutex<HashMap<String, String>>,
 }
 
 impl Cacher for SimpleMemCacher {

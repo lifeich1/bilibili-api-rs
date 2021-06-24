@@ -19,6 +19,7 @@ struct ApiRequestParamsBuilder {
     builder: reqwest::RequestBuilder,
 }
 
+/// Store api request that is going to emit.
 pub struct ApiRequest {
     ctx: crate::Context,
     builder: Option<reqwest::RequestBuilder>,
@@ -171,6 +172,7 @@ impl ApiRequest {
     }
 }
 
+/// API client context
 #[derive(Clone)]
 pub struct Context {
     net: reqwest::Client,
@@ -178,6 +180,9 @@ pub struct Context {
 }
 
 impl Context {
+    /// New a context
+    ///
+    /// Default with cacher [`SimpleMemCacher`][crate::cache::SimpleMemCacher].
     pub fn new() -> crate::ApiResult<Self> {
         Ok(Self {
             net: new_http_client()?,
@@ -185,10 +190,12 @@ impl Context {
         })
     }
 
+    /// Enable to replace the cacher
     pub fn replace_cacher(self, cacher: Arc<dyn cache::Cacher + Send + Sync>) -> Self {
         Self { cacher, ..self }
     }
 
+    /// New a user API collection
     pub fn new_user<T: ToString>(&self, uid: T) -> User {
         User::new(self, uid)
     }

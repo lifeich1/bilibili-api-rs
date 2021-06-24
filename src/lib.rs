@@ -12,9 +12,15 @@
 //! }
 //! ```
 
+/// Provide bilibili APIs
 pub mod api;
+
 mod api_info;
+
+/// The module declare the cache interface and provide a [`SimpleMemCacher`][cache::SimpleMemCacher]
 pub mod cache;
+
+/// Declare error enum
 pub mod error;
 
 /// The module contain a helpful bevy plugin [`plugin::ApiRuntimePlugin`].
