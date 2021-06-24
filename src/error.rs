@@ -6,12 +6,13 @@ pub type ApiResult<T> = std::result::Result<T, crate::error::ApiError>;
 #[derive(Debug)]
 pub enum ApiError {
     Network(reqwest::Error),
-    Remote(String),
+    Remote(Option<i64>, Option<String>),
+    Join(tokio::task::JoinError),
 }
 
 impl ApiError {
-    pub fn remote_err<T: ToString>(msg: T) -> Self {
-        Self::Remote(msg.to_string())
+    pub fn remote_err(code: Option<i64>, msg: Option<&str>) -> Self {
+        Self::Remote(code, msg.map(str::to_string))
     }
 
     pub fn is_network(&self) -> bool {
@@ -32,11 +33,18 @@ impl From<reqwest::Error> for ApiError {
     }
 }
 
+impl From<tokio::task::JoinError> for ApiError {
+    fn from(error: tokio::task::JoinError) -> Self {
+        Self::Join(error)
+    }
+}
+
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Self::Network(e) => e.fmt(f),
-            Self::Remote(s) => write!(f, "Remote: {}", &s),
+            Self::Join(e) => e.fmt(f),
+            Self::Remote(c, s) => write!(f, "Remote api error code {:?}: {:?}", c, s),
         }
     }
 }
@@ -45,6 +53,7 @@ impl StdError for ApiError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             Self::Network(e) => e.source(),
+            Self::Join(e) => e.source(),
             _ => None,
         }
     }

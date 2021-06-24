@@ -27,6 +27,7 @@ futures-lite = { version = "1.11.3", optional = true }
 version = "1"
 features = [
     "macros",
+    "rt",
     "rt-multi-thread",
     "net",
 ]

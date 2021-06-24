@@ -138,10 +138,7 @@ impl ApiRequest {
                     .as_str()
                     .or_else(|| resp["message"].as_str())
                     .unwrap_or("detail missed");
-                Err(ApiError::remote_err(format!(
-                    "api return code {}: {}",
-                    code, msg
-                )))
+                Err(ApiError::remote_err(Some(code), Some(msg)))
             } else {
                 Ok(if resp["data"].is_null() {
                     resp["result"].take()
@@ -150,7 +147,7 @@ impl ApiRequest {
                 })
             }
         } else {
-            Err(ApiError::remote_err("api return code null"))
+            Err(ApiError::remote_err(None, None))
         }
     }
 

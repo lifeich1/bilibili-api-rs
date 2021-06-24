@@ -7,42 +7,49 @@ use crate::{ApiRequest, ApiResult};
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {
-    rt: runtime::Runtime,
+    rt_hdl: runtime::Handle;
 }
 
 pub struct RuntimeHandle(runtime::Handle);
 
-pub struct ApiRequestTask(bevy::tasks::Task<ApiResult<serde_json::Value>>);
+pub struct ApiRequestTodo(ApiResult<ApiRequest>);
+
+struct ApiRequestTask(bevy::tasks::Task<ApiResult<serde_json::Value>>);
 
 pub struct ApiTaskResult(ApiResult<serde_json::Value>);
 
 impl ApiRuntimePlugin {
-    pub fn new() -> Self {
+    pub fn new(rt: &runtime::Runtime) -> Self {
         Self {
-            rt: runtime::Runtime::new()
-                .expect("System failed to create multi-thread tokio runtime")
+            rt_hdl: rt.handle().clone(),
         }
-    }
-
-    pub fn spwan(commands: &mut EntityCommands,
-                 thread_pool: &Res<IoTaskPool>,
-                 rt_handle: &Res<RuntimeHandle>,
-                 req: ApiResult<ApiRequest>,
-                 ) {
-        let rt = rt_handle.0.clone();
-        let task = thread_pool.spwan(async move {
-            rt.block_on(async move {
-                req?.await
-            });
-        });
-        commands.insert(ApiRequestTask(task));
     }
 }
 
 impl Plugin for ApiRuntimePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.insert_resource(RuntimeHandle(self.rt.handle().clone()))
+            .add_system(emit_tasks.system());
             .add_system(handle_tasks.system());
+    }
+}
+
+fn emit_tasks(
+    mut commands: Commands,
+    mut todos: Query<(Entity, ApiRequestTodo)>,
+    thread_pool: &Res<IoTaskPool>,
+    rt_handle: &Res<RuntimeHandle>,
+    ) {
+    for (entity, todo) in todos.iter() {
+        match todo {
+            Ok(req) => {
+                let task = thread_pool.spwan(rt_handle.0.spwan(req.query()));
+                commands.entity(entity).insert(ApiRequestTask(task));
+            },
+            Err(e) => {
+                commands.entity(entity).insert(ApiTaskResult(Err(e)));
+            },
+        }
     }
 }
 
