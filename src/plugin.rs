@@ -7,6 +7,7 @@ use tokio::runtime;
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {
+    ctx: crate::Context,
     rt_hdl: runtime::Handle,
 }
 
@@ -40,8 +41,9 @@ impl Deref for ApiTaskResult {
 }
 
 impl ApiRuntimePlugin {
-    pub fn new(rt: &runtime::Runtime) -> Self {
+    pub fn new(ctx: &crate::Context, rt: &runtime::Runtime) -> Self {
         Self {
+            ctx: ctx.clone(),
             rt_hdl: rt.handle().clone(),
         }
     }
@@ -50,6 +52,7 @@ impl ApiRuntimePlugin {
 impl Plugin for ApiRuntimePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.insert_resource(RuntimeHandle(self.rt_hdl.clone()))
+            .insert_resource(self.ctx.clone())
             .add_system(handle_tasks.system());
     }
 }

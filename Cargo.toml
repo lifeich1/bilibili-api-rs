@@ -35,6 +35,7 @@ features = [
 
 [dev-dependencies]
 simple_logger = "1.11"
+chrono = "0.4"
 
 
 [features]
