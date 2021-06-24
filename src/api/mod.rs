@@ -161,7 +161,7 @@ impl ApiRequest {
 #[derive(Clone)]
 pub struct Context {
     net: reqwest::Client,
-    cacher: Arc<dyn cache::Cacher>,
+    cacher: Arc<dyn cache::Cacher + Send + Sync>,
 }
 
 impl Context {
@@ -172,7 +172,7 @@ impl Context {
         })
     }
 
-    pub fn replace_cacher(self, cacher: Arc<dyn cache::Cacher>) -> Self {
+    pub fn replace_cacher(self, cacher: Arc<dyn cache::Cacher + Send + Sync>) -> Self {
         Self {
             cacher,
             ..self
