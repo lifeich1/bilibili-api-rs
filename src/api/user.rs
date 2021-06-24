@@ -1,7 +1,7 @@
-use crate::api_info;
-use crate::Context;
-use crate::error::ApiResult;
 use crate::api::ApiRequest;
+use crate::api_info;
+use crate::error::ApiResult;
+use crate::Context;
 
 use super::ApiRequestBuilder;
 
@@ -9,7 +9,6 @@ pub struct User {
     ctx: Context,
     uid: String,
 }
-
 
 impl User {
     pub fn new<T: ToString>(n: &Context, uid: T) -> Self {
@@ -20,8 +19,7 @@ impl User {
     }
 
     fn rb(&self) -> ApiRequestBuilder {
-        self.ctx.req_build()
-            .api(api_info::user::get)
+        self.ctx.req_build().api(api_info::user::get)
     }
 
     pub fn get_info(&self) -> ApiResult<ApiRequest> {
@@ -35,15 +33,8 @@ impl User {
         let pn = page_no.to_string();
         self.rb()
             .path("info/video")
-            .query(&[
-                   ("mid", &self.uid),
-                   ("pn", &pn),
-            ])
-            .query(&[
-                   ("tid", "0"),
-                   ("ps", "30"),
-                   ("order", "pubdate"),
-            ])
+            .query(&[("mid", &self.uid), ("pn", &pn)])
+            .query(&[("tid", "0"), ("ps", "30"), ("order", "pubdate")])
             .nobuffer()
     }
 }

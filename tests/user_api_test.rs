@@ -1,4 +1,4 @@
-use bilibili_api_rs::{Context, ApiResult};
+use bilibili_api_rs::{ApiResult, Context};
 use simple_logger::SimpleLogger;
 
 //#[ignore]
@@ -30,7 +30,6 @@ async fn user_api_async_test() -> ApiResult<()> {
     let v = u.get_info()?.invalidate().query().await?;
     assert_eq!(v["mid"].as_i64().unwrap(), 10592068);
     assert_eq!(v["name"].as_str().unwrap(), "RemediosShio");
-
 
     Ok(())
 }

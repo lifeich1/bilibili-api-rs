@@ -1,8 +1,8 @@
+use crate::{ApiRequest, ApiResult};
 use bevy::prelude::*;
 use bevy::tasks::TaskPool;
-use tokio::runtime;
 use futures_lite::future;
-use crate::{ApiRequest, ApiResult};
+use tokio::runtime;
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {
@@ -18,16 +18,13 @@ pub trait SpawnOnWorld {
 impl SpawnOnWorld for ApiResult<ApiRequest> {
     fn spawn_on(self, task_pool: &TaskPool, rt_hdl: Res<RuntimeHandle>) -> ApiRequestTask {
         let rt = rt_hdl.0.clone();
-        ApiRequestTask(task_pool.spawn(async move {
-            rt.block_on(self?.query())
-        }))
+        ApiRequestTask(task_pool.spawn(async move { rt.block_on(self?.query()) }))
     }
 }
 
 pub struct ApiRequestTask(bevy::tasks::Task<ApiResult<serde_json::Value>>);
 
 pub struct ApiTaskResult(ApiResult<serde_json::Value>);
-
 
 impl ApiRuntimePlugin {
     pub fn new(rt: &runtime::Runtime) -> Self {
@@ -44,13 +41,11 @@ impl Plugin for ApiRuntimePlugin {
     }
 }
 
-fn handle_tasks(
-    mut commands: Commands,
-    mut api_tasks: Query<(Entity, &mut ApiRequestTask)>,
-    ) {
+fn handle_tasks(mut commands: Commands, mut api_tasks: Query<(Entity, &mut ApiRequestTask)>) {
     for (entity, mut task) in api_tasks.iter_mut() {
         if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
-            commands.entity(entity)
+            commands
+                .entity(entity)
                 .remove::<ApiRequestTask>()
                 .insert(ApiTaskResult(result));
         }

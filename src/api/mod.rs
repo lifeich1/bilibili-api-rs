@@ -3,9 +3,9 @@ pub mod user;
 use log::{debug, trace};
 use std::sync::Arc;
 
+use crate::cache;
 use crate::error::{ApiError, ApiResult};
 use serde::Serialize;
-use crate::cache;
 
 use self::user::User;
 
@@ -50,7 +50,11 @@ impl ApiRequestBuilder {
         self.path2(method_path, url_path)
     }
 
-    pub fn path2<T: ToString, U: ToString>(self, method_path: T, url_path: U) -> ApiRequestParamsBuilder {
+    pub fn path2<T: ToString, U: ToString>(
+        self,
+        method_path: T,
+        url_path: U,
+    ) -> ApiRequestParamsBuilder {
         let mpath = method_path.to_string();
         let upath = url_path.to_string();
         let method = self.get_from_path(&mpath);
@@ -59,8 +63,12 @@ impl ApiRequestBuilder {
     }
 
     fn get_from_path<'a>(&self, path: &'a str) -> &'a str {
-        let getter = self.api_info_getter.expect("missed api info getter function");
-        getter(path).as_str().unwrap_or_else(|| panic!("invalid api info at path {}", path))
+        let getter = self
+            .api_info_getter
+            .expect("missed api info getter function");
+        getter(path)
+            .as_str()
+            .unwrap_or_else(|| panic!("invalid api info at path {}", path))
     }
 
     /// Create ApiRequestParamsBuilder from method and url.
@@ -118,8 +126,13 @@ impl ApiRequest {
             }
         }
 
-        let resp = self.ctx.net.execute(req)
-            .await?.json::<serde_json::Value>().await?;
+        let resp = self
+            .ctx
+            .net
+            .execute(req)
+            .await?
+            .json::<serde_json::Value>()
+            .await?;
         trace!("ok {}", buffer_key);
         let r = Self::filter_result(resp)?;
 
@@ -173,10 +186,7 @@ impl Context {
     }
 
     pub fn replace_cacher(self, cacher: Arc<dyn cache::Cacher + Send + Sync>) -> Self {
-        Self {
-            cacher,
-            ..self
-        }
+        Self { cacher, ..self }
     }
 
     pub fn new_user<T: ToString>(&self, uid: T) -> User {
@@ -187,7 +197,6 @@ impl Context {
         ApiRequestBuilder::new(self)
     }
 }
-
 
 fn new_http_client() -> crate::ApiResult<reqwest::Client> {
     Ok(reqwest::ClientBuilder::new()
@@ -204,7 +213,6 @@ fn new_http_client() -> crate::ApiResult<reqwest::Client> {
         .build()?)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,8 +227,7 @@ mod tests {
     #[should_panic(expected = "missed api info getter function")]
     fn test_panic_api_req_builder_not_set_api() {
         let n = crate::Context::new().unwrap();
-        let _ = ApiRequestBuilder::new(&n)
-            .path("info/info");
+        let _ = ApiRequestBuilder::new(&n).path("info/info");
     }
 
     #[test]
