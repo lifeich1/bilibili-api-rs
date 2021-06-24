@@ -33,6 +33,9 @@ pub mod error;
 ///    an entity.
 /// 3. Receive result: the entity attached with `ApiRequestTask` will receive a
 ///    [`plugin::ApiTaskResult`].
+///
+/// ## Example
+/// Checkout [`examples/bevy-task.rs`](https://github.com/lifeich1/bilibili-api-rs/blob/master/examples/bevy-task.rs)
 #[cfg(feature = "plugin")]
 pub mod plugin;
 
