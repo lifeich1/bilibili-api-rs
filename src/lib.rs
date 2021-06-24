@@ -18,6 +18,15 @@ pub mod cache;
 pub mod error;
 
 /// The module contain a helpful bevy plugin [`plugin::ApiRuntimePlugin`].
+///
+/// ## Usage
+/// 1. Setup: create a [`tokio::runtime::Runtime`] and add [`plugin::ApiRuntimePlugin`] to app with
+///    the runtime.
+/// 2. Emit task: create a `ApiResult<ApiRequest>`, spawn it with
+///    [`spawn_on`][`plugin::SpawnOnWorld`] then attach the returned [`plugin::ApiRequestTask`] to
+///    an entity.
+/// 3. Receive result: the entity attached with `ApiRequestTask` will receive a
+///    [`plugin::ApiTaskResult`].
 #[cfg(feature = "plugin")]
 pub mod plugin;
 

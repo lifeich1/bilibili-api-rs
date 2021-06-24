@@ -3,14 +3,17 @@ use bevy::prelude::*;
 use bevy::tasks::TaskPool;
 use futures_lite::future;
 use tokio::runtime;
+use std::ops::Deref;
 
 /// A bevy plugin for easily emit api requests as io tasks.
 pub struct ApiRuntimePlugin {
     rt_hdl: runtime::Handle,
 }
 
+/// The resource carries tokio runtime handle.
 pub struct RuntimeHandle(runtime::Handle);
 
+/// Helper api for spawn api request on runtime and bevy task pool.
 pub trait SpawnOnWorld {
     fn spawn_on(self, task_pool: &TaskPool, rt_hdl: Res<RuntimeHandle>) -> ApiRequestTask;
 }
@@ -22,9 +25,19 @@ impl SpawnOnWorld for ApiResult<ApiRequest> {
     }
 }
 
+/// Component that hold the future of api reqeust
 pub struct ApiRequestTask(bevy::tasks::Task<ApiResult<serde_json::Value>>);
 
+/// Component that hold the final api result
 pub struct ApiTaskResult(ApiResult<serde_json::Value>);
+
+impl Deref for ApiTaskResult {
+    type Target = ApiResult<serde_json::Value>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl ApiRuntimePlugin {
     pub fn new(rt: &runtime::Runtime) -> Self {
