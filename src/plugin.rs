@@ -15,7 +15,7 @@ pub struct ApiRuntimePlugin {
 pub struct RuntimeHandle(runtime::Handle);
 
 /// Struct tagged the api request
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ApiRequestTag(serde_json::Value);
 
 impl Deref for ApiRequestTag {
@@ -42,6 +42,7 @@ pub struct ApiRequestEvent {
 }
 
 /// Event that report the api result
+#[derive(Debug)]
 pub struct ApiTaskResultEvent {
     pub result: ApiResult<serde_json::Value>,
     pub tag: ApiRequestTag,
