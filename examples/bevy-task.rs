@@ -1,7 +1,7 @@
-use bevy::{app::AppExit, prelude::*, tasks::IoTaskPool};
+use bevy::{app::AppExit, prelude::*};
 use bilibili_api_rs::{
     api,
-    plugin::{ApiRuntimePlugin, ApiTaskResult, RuntimeHandle, SpawnOnWorld},
+    plugin::{ApiRequestEvent, ApiRuntimePlugin, ApiTaskResultEvent},
 };
 use chrono::naive::NaiveDateTime;
 use tokio::runtime;
@@ -20,36 +20,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-struct UserInfo(String);
+const UID: u64 = 10592068;
 
-fn emit_request(
-    mut commands: Commands,
-    context: Res<api::Context>,
-    thread_pool: Res<IoTaskPool>,
-    runtime: Res<RuntimeHandle>,
-) {
-    let task = context
-        .new_user(10592068)
-        .video_list(1)
-        .spawn_on(&thread_pool.0, runtime);
-    commands
-        .spawn()
-        .insert(task)
-        .insert(UserInfo(String::from("Thank you, Shenme-dioShio!")));
+fn emit_request(mut req_chan: EventWriter<ApiRequestEvent>, context: Res<api::Context>) {
+    req_chan.send(ApiRequestEvent {
+        req: context.new_user(UID).video_list(1),
+        tag: String::from("Thank you, Shenme-dioShio!").into(),
+    });
 }
 
 fn handle_result(
-    mut commands: Commands,
-    results: Query<(Entity, &UserInfo, &ApiTaskResult)>,
+    mut result_chan: EventReader<ApiTaskResultEvent>,
     mut exit_chan: EventWriter<AppExit>,
 ) {
-    for (entity, info, result) in results.iter() {
-        match result.as_ref() {
+    for ev in result_chan.iter() {
+        match ev.result.as_ref() {
             Ok(v) => print_vid_list(v),
             Err(e) => println!("print error: {}", e),
         }
-        println!("info: {}", info.0);
-        commands.entity(entity).remove::<ApiTaskResult>();
+        println!("tag: {}", ev.tag.to_string());
         exit_chan.send(AppExit {});
     }
 }
