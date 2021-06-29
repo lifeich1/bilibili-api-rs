@@ -172,6 +172,17 @@ impl ApiRequest {
     }
 }
 
+impl Clone for ApiRequest {
+    fn clone(&self) -> Self {
+        Self {
+            ctx: self.ctx.clone(),
+            builder: self.builder.as_ref().map(|b| b.try_clone().expect("Api request must not have stream body")),
+            bufferable: self.bufferable,
+            invalidate_flag: self.invalidate_flag,
+        }
+    }
+}
+
 /// API client context
 #[derive(Clone)]
 pub struct Context {
