@@ -40,3 +40,8 @@ chrono = "0.4"
 
 [features]
 plugin = ["bevy", "futures-lite"]
+
+
+[[example]]
+name = "bevy-task"
+required-features = ["plugin"]
