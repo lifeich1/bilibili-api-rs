@@ -109,3 +109,17 @@ fn handle_tasks(
         }
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tag_index() {
+        let uid: u64 = 10592068;
+        let tag: ApiRequestTag = serde_json::json!({"uid": uid, "cmd": "refresh"}).into();
+        assert_eq!(tag["uid"].as_u64().unwrap(), uid);
+        assert_eq!(tag["cmd"].as_str().unwrap(), "refresh");
+    }
+}
