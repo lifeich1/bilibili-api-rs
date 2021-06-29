@@ -1,7 +1,8 @@
-use crate::{ApiRequest, ApiResult};
+use crate::{error::ApiError, ApiRequest, ApiResult};
 use bevy::prelude::*;
 use bevy::tasks::IoTaskPool;
 use futures_lite::future;
+use std::ops::Deref;
 use tokio::runtime;
 
 /// A bevy plugin for easily emit api requests as io tasks.
@@ -13,23 +14,37 @@ pub struct ApiRuntimePlugin {
 /// The resource carries tokio runtime handle.
 pub struct RuntimeHandle(runtime::Handle);
 
+/// Struct tagged the api request
 #[derive(Clone)]
-pub enum ApiRequestTag {
-    Num(i64),
-    UNum(u64),
-    Str(String),
+pub struct ApiRequestTag(serde_json::Value);
+
+impl Deref for ApiRequestTag {
+    type Target = serde_json::Value;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> From<T> for ApiRequestTag
+where
+    serde_json::Value: From<T>,
+{
+    fn from(t: T) -> Self {
+        Self(serde_json::Value::from(t))
+    }
 }
 
 /// Event that emit api request
 pub struct ApiRequestEvent {
-    req: ApiResult<ApiRequest>,
-    tag: ApiRequestTag,
+    pub req: ApiResult<ApiRequest>,
+    pub tag: ApiRequestTag,
 }
 
 /// Event that report the api result
 pub struct ApiTaskResultEvent {
-    result: ApiResult<serde_json::Value>,
-    tag: ApiRequestTag,
+    pub result: ApiResult<serde_json::Value>,
+    pub tag: ApiRequestTag,
 }
 
 /// Component that hold the future of api reqeust
@@ -50,6 +65,7 @@ impl Plugin for ApiRuntimePlugin {
             .insert_resource(self.ctx.clone())
             .add_event::<ApiRequestEvent>()
             .add_event::<ApiTaskResultEvent>()
+            .add_system(emit_tasks.system())
             .add_system(handle_tasks.system());
     }
 }
@@ -70,9 +86,9 @@ fn emit_tasks(
                 commands.spawn().insert(ev.tag.clone()).insert(task);
             }
             Err(e) => result_chan.send(ApiTaskResultEvent {
-                result: Err(e),
+                result: Err(ApiError::general(e)),
                 tag: ev.tag.clone(),
-            })
+            }),
         }
     }
 }
@@ -84,10 +100,7 @@ fn handle_tasks(
 ) {
     for (entity, tag, mut task) in api_tasks.iter_mut() {
         if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
-            commands
-                .entity(entity)
-                .remove::<ApiRequestTask>()
-                .despawn();
+            commands.entity(entity).remove::<ApiRequestTask>().despawn();
 
             result_chan.send(ApiTaskResultEvent {
                 result,

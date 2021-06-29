@@ -8,11 +8,16 @@ pub enum ApiError {
     Network(reqwest::Error),
     Remote(Option<i64>, Option<String>),
     Join(tokio::task::JoinError),
+    General(String),
 }
 
 impl ApiError {
     pub fn remote_err(code: Option<i64>, msg: Option<&str>) -> Self {
         Self::Remote(code, msg.map(str::to_string))
+    }
+
+    pub fn general<T: ToString>(msg: T) -> Self {
+        Self::General(msg.to_string())
     }
 
     pub fn is_network(&self) -> bool {
@@ -45,6 +50,7 @@ impl fmt::Display for ApiError {
             Self::Network(e) => e.fmt(f),
             Self::Join(e) => e.fmt(f),
             Self::Remote(c, s) => write!(f, "Remote api error code {:?}: {:?}", c, s),
+            Self::General(s) => write!(f, "{}", s),
         }
     }
 }

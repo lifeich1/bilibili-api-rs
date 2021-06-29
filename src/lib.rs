@@ -27,12 +27,12 @@ pub mod error;
 ///
 /// ## Usage
 /// 1. Setup: create [`Runtime`][tokio::runtime::Runtime] and [`Context`][crate::Context] for
-///    plugin, then add [`plugin::ApiRuntimePlugin`] to app with the runtime.
-/// 2. Emit task: create a `ApiResult<ApiRequest>`, spawn it with
-///    [`spawn_on`][`plugin::SpawnOnWorld`] then attach the returned [`plugin::ApiRequestTask`] to
-///    an entity.
-/// 3. Receive result: the entity attached with `ApiRequestTask` will receive a
-///    [`plugin::ApiTaskResult`].
+///    plugin, then add [ApiRuntimePlugin][plugin::ApiRuntimePlugin] to app with the runtime.
+/// 2. Emit task: create a `ApiResult<ApiRequest>`, emit it with
+///    [`ApiRequestTag`][plugin::ApiRequestTag] to [`ApiRequestEvent`][plugin::ApiRequestEvent]
+///    channel.
+/// 3. Receive result: [`ApiTaskResultEvent`][plugin::ApiTaskResultEvent] channel will offer the
+///    tagged result.
 ///
 /// ## Example
 /// Checkout [`examples/bevy-task.rs`](https://github.com/lifeich1/bilibili-api-rs/blob/master/examples/bevy-task.rs)
