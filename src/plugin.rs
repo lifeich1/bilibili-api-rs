@@ -111,7 +111,6 @@ fn handle_tasks(
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
