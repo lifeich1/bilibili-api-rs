@@ -38,6 +38,14 @@ impl User {
             .path("info/video")
             .query(&[("mid", &self.uid), ("pn", &pn)])
             .query(&[("tid", "0"), ("ps", "30"), ("order", "pubdate")])
+            .bufferable()
+    }
+
+    /// Get honorable statistic numbers
+    pub fn stat(&self) -> ApiResult<ApiRequest> {
+        self.rb()
+            .path("info/upstat")
+            .query(&[("mid", &self.uid)])
             .nobuffer()
     }
 }
