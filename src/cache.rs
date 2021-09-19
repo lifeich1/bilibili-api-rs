@@ -6,9 +6,19 @@ use std::time::{Duration, Instant};
 ///
 /// Note: must implement it with multi-thread safety.
 pub trait Cacher {
-    fn cache_store(&self, key: &str, val: &str);
-    fn cache_get(&self, key: &str) -> Option<String>;
+    fn cache_store(&self, _key: &str, _val: &str) {}
+
+    fn cache_get(&self, _key: &str) -> Option<String> {
+        None
+    }
 }
+
+#[derive(Default)]
+pub struct NoCacher {}
+
+impl Cacher for NoCacher {
+}
+
 
 /// A simple in memory cacher which remember until poweroff.
 #[derive(Default)]

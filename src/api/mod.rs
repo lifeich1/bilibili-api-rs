@@ -200,7 +200,7 @@ impl Context {
     pub fn new() -> crate::ApiResult<Self> {
         Ok(Self {
             net: new_http_client()?,
-            cacher: Arc::new(cache::SimpleMemCacher::default()),
+            cacher: Arc::new(cache::NoCacher::default()),
         })
     }
 
