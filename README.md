@@ -12,8 +12,6 @@ A rust library project got inspiration from [bilibili-api](https://github.com/Pa
 - No plan for cover all apis.
 - "GET" like api only.
 
-*WIP*
-
 
 ## Features
 
