@@ -16,9 +16,7 @@ pub trait Cacher {
 #[derive(Default)]
 pub struct NoCacher {}
 
-impl Cacher for NoCacher {
-}
-
+impl Cacher for NoCacher {}
 
 /// A simple in memory cacher which remember until poweroff.
 #[derive(Default)]

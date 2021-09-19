@@ -8,21 +8,17 @@ PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../Passkou/bilibili-api)
 
 bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
 O := src/api_info
-M4 := m4 -P
-FMT := vim -c "execute \"%s/\\r//g\"|execute \"normal gg=G\"|wq"
-RFMT := rustfmt
+CP := cp -av
 
 api_info_types := live user video
-api_info_outputs := $(api_info_types:%=$(O)/%.rs)
+api_info_outputs := $(api_info_types:%=$(O)/%.json)
 
 
 PHONY := all
 all: $(api_info_outputs)
 
-$(api_info_outputs): $(O)/%.rs : $(bapi_info_root)/%.json
-	$(M4) .m4/wrap_json.m4 $< > $@
-	$(RFMT) $@
-	$(FMT) $@
+$(api_info_outputs): $(O)/% : $(bapi_info_root)/%
+	$(CP) $< $@
 
 
 
