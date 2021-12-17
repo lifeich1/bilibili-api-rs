@@ -26,7 +26,7 @@ impl ApiError {
 
     pub fn as_network(&self) -> Option<&reqwest::Error> {
         match self {
-            Self::Network(e) => Some(&e),
+            Self::Network(e) => Some(e),
             _ => None,
         }
     }

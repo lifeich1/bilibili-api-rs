@@ -1,4 +1,5 @@
 pub mod user;
+pub mod xlive;
 
 use log::{debug, trace};
 use std::sync::Arc;
@@ -8,6 +9,7 @@ use crate::error::{ApiError, ApiResult};
 use serde::Serialize;
 
 use self::user::User;
+use self::xlive::Xlive;
 
 struct ApiRequestBuilder {
     ctx: crate::Context,
@@ -212,6 +214,11 @@ impl Context {
     /// New a user API collection
     pub fn new_user<T: ToString>(&self, uid: T) -> User {
         User::new(self, uid)
+    }
+
+    /// New a live neXt generation API collection
+    pub fn xlive(&self) -> Xlive {
+        Xlive::new(self)
     }
 
     fn req_build(&self) -> ApiRequestBuilder {

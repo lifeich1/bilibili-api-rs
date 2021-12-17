@@ -30,3 +30,8 @@ pub mod user {
     use super::*;
     def_data! { "user.json" }
 }
+
+pub mod xlive {
+    use super::*;
+    def_data! { "xlive.json" }
+}

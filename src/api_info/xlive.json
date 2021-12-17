@@ -1,0 +1,17 @@
+{
+  "info": {
+    "get_list": {
+      "url": "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "platform": "const str: web",
+        "parent_area_id": "int: 大分区号",
+        "area_id": "int: 子分区号",
+        "sort_type": "str: [live_time, sort_type_291]",
+        "page": "int: 页码"
+      },
+      "comment": "获取分区中直播列表"
+    }
+  }
+}
