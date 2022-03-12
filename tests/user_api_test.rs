@@ -4,7 +4,7 @@ use simple_logger::SimpleLogger;
 //#[ignore]
 #[tokio::test]
 async fn user_api_async_test() -> ApiResult<()> {
-    SimpleLogger::new().init().unwrap();
+    SimpleLogger::new().with_utc_timestamps().init().unwrap();
 
     let n = Context::new()?;
     let u = n.new_user(15810);
