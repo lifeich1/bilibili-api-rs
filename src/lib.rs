@@ -39,5 +39,5 @@ pub mod error;
 #[cfg(feature = "plugin")]
 pub mod plugin;
 
-pub use api::{user::User, ApiRequest, Context, xlive};
+pub use api::{user::User, xlive, ApiRequest, Context};
 pub use error::ApiResult;

@@ -129,13 +129,17 @@ impl ApiRequest {
             }
         }
 
-        let resp = self
-            .ctx
-            .net
-            .execute(req)
-            .await?
-            .json::<serde_json::Value>()
-            .await?;
+        let resp_txt = self.ctx.net.execute(req).await?.text().await?;
+        trace!("response text: {}", &resp_txt);
+        let resp: serde_json::Value = match serde_json::from_str(&resp_txt) {
+            Err(e) => {
+                let s = &resp_txt[e.column() - 1..];
+                trace!("try response slice: {}", s);
+                serde_json::from_str(s)?
+            }
+            Ok(r) => r,
+        };
+
         trace!("ok {}", buffer_key);
         let r = Self::filter_result(resp)?;
 

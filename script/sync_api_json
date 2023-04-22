@@ -4,7 +4,7 @@
 # *NOTE*: Must check PASSKOU_BILIBILI_API_REPO_HOME first.
 
 
-PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../Passkou/bilibili-api)
+PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../z/github.com/Nemo2011/bilibili-api)
 
 bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
 O := src/api_info

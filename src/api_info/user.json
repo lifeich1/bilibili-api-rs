@@ -1,10 +1,30 @@
 {
   "info": {
+    "name_to_uid": {
+      "url": "https://api.vc.bilibili.com/dynamic_mix/v1/dynamic_mix/name_to_uid",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "names": "string: 多个名称, 用,分割"
+      }
+    },
     "my_info": {
       "url": "https://api.bilibili.com/x/space/myinfo",
       "method": "GET",
       "verify": true,
       "comment": "获取自己的信息"
+    },
+    "edit_my_info": {
+      "url": "https://api.bilibili.com/x/member/web/update",
+      "method": "POST",
+      "verify": true,
+      "data": {
+        "birthday": "string: 用户生日",
+        "sex": "string: 用户性别",
+        "uname": "string: 用户昵称",
+        "usersign": "string: 用户签名"
+      },
+      "comment": "修改自己的信息"
     },
     "info": {
       "url": "https://api.bilibili.com/x/space/acc/info",
@@ -14,6 +34,33 @@
         "mid": "int: uid"
       },
       "comment": "用户基本信息"
+    },
+    "space_notice": {
+      "url": "http://api.bilibili.com/x/space/notice",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "mid": "int: uid"
+      },
+      "comment": "用户个人空间公告"
+    },
+    "user_tag": {
+      "url": "http://space.bilibili.com/ajax/tags/getSubList",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "mid": "int: uid"
+      },
+      "comment": "用户关注的 TAG / 话题,认证方式：SESSDATA"
+    },
+    "user_top_videos": {
+      "url": "https://api.bilibili.com/x/space/top/arc",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "vmid":"int: uid"
+      },
+      "comment": "用户代表作"
     },
     "relation": {
       "url": "https://api.bilibili.com/x/relation/stat",
@@ -33,8 +80,17 @@
       },
       "comment": "视频播放量，文章阅读量，总点赞数"
     },
+    "user_medal": {
+      "url": "https://api.live.bilibili.com/xlive/web-ucenter/user/MedalWall",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "target_id": "int: uid"
+      },
+      "comment": "读取用户粉丝牌详细信息，如果隐私则不可以"
+    },
     "live": {
-      "url": "https://api.live.bilibili.com/room/v1/Room/getRoomInfoOld",
+      "url": "https://api.bilibili.com/x/space/acc/info",
       "method": "GET",
       "verify": false,
       "params": {
@@ -55,6 +111,27 @@
         "order": "str: pubdate 上传日期，pubdate 播放量，pubdate 收藏量"
       },
       "comment": "搜索用户视频"
+    },
+    "reservation": {
+      "url": "https://api.bilibili.com/x/space/reservation",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "vmid": "int: uid"
+      },
+      "comment": "获取用户空间预约"
+    },
+    "album": {
+      "url": "https://api.vc.bilibili.com/link_draw/v1/doc/doc_list",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "uid": "int: uid 此项必须",
+        "page_size": "int: 每页项数 此项必须",
+        "page_num": "int: 页码",
+        "biz": "str: 全部：all 绘画：draw 摄影：photo 日常：daily 默认为 all"
+      },
+      "comment": "相簿"
     },
     "audio": {
       "url": "https://api.bilibili.com/audio/music-service/web/song/upper",
@@ -125,6 +202,26 @@
       },
       "comment": "获取用户关注列表（不是自己只能访问前 5 页）"
     },
+    "all_followings": {
+      "url": "https://account.bilibili.com/api/member/getCardByMid",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "mid": "int: uid"
+      },
+      "comment": "获取用户所有关注（需要用户公开信息）"
+    },
+    "all_followings2": {
+      "url": "https://app.biliapi.net/x/v2/relation/followings",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "vmid": "int: uid",
+        "pn": "int: 页码",
+        "ps":"const int: 100"
+      },
+      "comment": "获取用户关注"
+    },
     "followers": {
       "url": "https://api.bilibili.com/x/relation/followers",
       "method": "GET",
@@ -136,6 +233,16 @@
         "order": "str: desc 倒序, asc 正序"
       },
       "comment": "获取用户粉丝列表（不是自己只能访问前 5 页，是自己也不能获取全部的样子）"
+    },
+    "top_followers": {
+      "url": "https://member.bilibili.com/x/web/data/fan",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "t": "int: since when in timestamp(msec)",
+        "csrf,csrf_token": "要给两个"
+      },
+      "comment": "粉丝排行"
     },
     "overview": {
       "url": "https://api.bilibili.com/x/space/navnum",
@@ -172,6 +279,139 @@
         "ps": "const int: 100"
       },
       "comment": "用户浏览历史记录"
+    },
+    "channel_list": {
+      "url": "https://api.bilibili.com/x/polymer/space/seasons_series_list",
+      "method": "GET",
+      "verity": false,
+      "params": {
+        "mid": "int: uid",
+        "page_num": "int: 开始项",
+        "page_size": "int: 开始项后面的项数"
+      },
+      "comment": "查看用户合集的列表（新版）"
+    },
+    "channel_video_series": {
+      "url": "https://api.bilibili.com/x/series/archives",
+      "method": "GET",
+      "verity": false,
+      "params": {
+        "mid": "int: uid",
+        "series_id": "int: series_id",
+        "pn": "int: 页码",
+        "ps": "const int: 100"
+      },
+      "comment": "查看列表内视频（旧版）"
+    },
+    "channel_video_season": {
+      "url": "https://api.bilibili.com/x/polymer/space/seasons_archives_list",
+      "method": "GET",
+      "verity": false,
+      "params": {
+        "mid": "int: uid",
+        "season_id": "int: season_id",
+        "sort_reverse": "bool: 是否升序排序，否则默认排序",
+        "page_num": "int: 页码",
+        "page_size": "int: 每一页的项数"
+      },
+      "comment": "查看用户合集中的视频（新版）"
+    },
+    "pugv": {
+      "url": "https://api.bilibili.com/pugv/app/web/season/page",
+      "method": "GET",
+      "verity": false,
+      "params": {
+        "mid": "int: uid"
+      },
+      "comment": "查看用户的课程"
+    },
+    "get_coins": {
+      "url": "https://account.bilibili.com/site/getCoin",
+      "method": "GET",
+      "verify": true,
+      "comment": "获取硬币数量"
+    },
+    "events": {
+      "url": "https://member.bilibili.com/x2/creative/h5/calendar/event",
+      "method": "GET",
+      "params": {
+        "ts": "int: 时间戳"
+      },
+      "verify": true,
+      "comment": "获取事件"
+    },
+    "public_notes": {
+      "url": "https://api.bilibili.com/x/note/publish/list/user",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "pn": "int: 页码",
+        "ps": "int: 每页项数"
+      },
+      "comment": "获取用户的公开笔记信息"
+    },
+    "all_notes": {
+      "url": "https://api.bilibili.com/x/note/list",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "pn": "int: 页码",
+        "ps": "int: 每页项数"
+      },
+      "comment": "获取用户的笔记信息"
+    },
+    "get_special_followings": {
+      "url": "https://api.bilibili.com/x/relation/tag/special",
+      "method": "GET",
+      "params": {
+        "pn": "int: 页码",
+        "ps":"int: 每页项数"
+      },
+      "verify": true,
+      "comment": "获取自己的特别关注"
+    },
+    "get_whisper_followings": {
+      "url": "https://api.bilibili.com/x/relation/whispers",
+      "method": "GET",
+      "params": {
+        "pn": "int: 页码",
+        "ps":"int: 每页项数"
+      },
+      "verify": true,
+      "comment": "获取自己的悄悄关注"
+    },
+    "get_friends": {
+      "url": "https://api.bilibili.com/x/relation/friends",
+      "method": "GET",
+      "verify": true,
+      "comment": "获取与自己互粉的人"
+    },
+    "get_black_list": {
+      "url": "https://api.bilibili.com/x/relation/blacks",
+      "method": "GET",
+      "params": {
+        "pn": "int: 页码",
+        "ps":"int: 每页项数"
+      },
+      "verify": true,
+      "comment": "获取自己的黑名单列表"
+    },
+    "get_same_followings": {
+      "url": "https://api.bilibili.com/x/relation/same/followings",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "vmid": "int: uid",
+        "pn": "int: 页码",
+        "ps":"int: 每页项数"
+      },
+      "comment": "获取指定用户和自己共同关注的 up 主"
+    },
+    "jury": {
+      "url": "https://api.bilibili.com/x/credit/v2/jury/jury",
+      "method": "GET",
+      "verify": true,
+      "comment": "获取自己风纪委员信息"
     }
   },
   "operate": {
@@ -186,21 +426,15 @@
       },
       "comment": "用户关系操作"
     },
-    "send_msg": {
-      "url": "https://api.vc.bilibili.com/web_im/v1/web_im/send_msg",
+    "set_space_notice": {
+      "url": "http://api.bilibili.com/x/space/notice/set",
       "method": "POST",
       "verify": true,
-      "data": {
-        "msg[sender_uid]": "int: 自己的 UID",
-        "msg[receiver_id]": "int: 对方 UID",
-        "msg[receiver_type]": "const int: 1",
-        "msg[msg_type]": "const int: 1",
-        "msg[msg_status]": "const int: 0",
-        "msg[content]": {
-          "content": "str: 文本内容"
-        }
+      "params": {
+        "notice": "str: text ,不必要",
+        "csrf": "str: CSRF Token（位于 cookie），必要"
       },
-      "comment": "给用户发信息"
+      "comment": "修改用户个人空间公告"
     },
     "create_subscribe_group": {
       "url": "https://api.bilibili.com/x/relation/tag/create",
@@ -239,6 +473,69 @@
         "tagids": "commaSeparatedList[int]: 分组的 tagids，逗号分隔"
       },
       "comment": "移动用户到关注分组"
+    }
+  },
+  "channel_series": {
+    "info": {
+      "url": "https://api.bilibili.com/x/series/series",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "series_id": "int: series_id"
+      },
+      "comment": "获取简介"
+    },
+    "season_info": {
+      "url": "https://api.bilibili.com/x/space/fav/season/list",
+      "method": "GET",
+      "verify": false,
+      "params": {
+        "season_id": "int: season_id"
+      },
+      "comment": "获取简介"
+    },
+    "del_channel_aids_series": {
+      "url": "https://api.bilibili.com/x/series/series/delArchives",
+      "method": "POST",
+      "verity": true,
+      "params": {
+        "mid": "int: uid",
+        "series_id": "int: series_id",
+        "aids": "int: aid 列表"
+      }
+    },
+    "add_channel_aids_series": {
+      "url": "https://api.bilibili.com/x/series/series/addArchives",
+      "method": "POST",
+      "verity": true,
+      "params": {
+        "mid": "int: uid",
+        "series_id": "int: series_id",
+        "aids": "int: aid 列表"
+      }
+    },
+    "del_channel_series": {
+      "url": "https://api.bilibili.com/x/series/series/delete",
+      "method": "POST",
+      "verity": true,
+      "query": {
+        "mid": "int: uid",
+        "series_id": "int: series_id",
+        "aids": "list: 所有 aid 列表",
+        "csrf": "string: bili_jct 的值"
+      }
+    },
+    "create": {
+      "url": "https://api.bilibili.com/x/series/series/createAndAddArchives",
+      "method": "POST",
+      "verify": true,
+      "params": {
+        "mid": "int: uid",
+        "aids": "int: aid 列表",
+        "name": "str",
+        "keywords": "str,str",
+        "description": "str"
+      }
     }
   }
 }

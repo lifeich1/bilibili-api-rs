@@ -9,6 +9,7 @@ pub enum ApiError {
     Remote(Option<i64>, Option<String>),
     Join(tokio::task::JoinError),
     General(String),
+    Json(serde_json::Error),
 }
 
 impl ApiError {
@@ -32,6 +33,12 @@ impl ApiError {
     }
 }
 
+impl From<serde_json::Error> for ApiError {
+    fn from(error: serde_json::Error) -> Self {
+        Self::Json(error)
+    }
+}
+
 impl From<reqwest::Error> for ApiError {
     fn from(error: reqwest::Error) -> Self {
         Self::Network(error)
@@ -49,6 +56,7 @@ impl fmt::Display for ApiError {
         match self {
             Self::Network(e) => e.fmt(f),
             Self::Join(e) => e.fmt(f),
+            Self::Json(e) => e.fmt(f),
             Self::Remote(c, s) => write!(f, "Remote api error code {:?}: {:?}", c, s),
             Self::General(s) => write!(f, "{}", s),
         }
@@ -60,6 +68,7 @@ impl StdError for ApiError {
         match self {
             Self::Network(e) => e.source(),
             Self::Join(e) => e.source(),
+            Self::Json(e) => e.source(),
             _ => None,
         }
     }

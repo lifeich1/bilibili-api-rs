@@ -4,17 +4,26 @@ use simple_logger::SimpleLogger;
 //#[ignore]
 #[tokio::test]
 async fn user_api_async_test() -> ApiResult<()> {
+    println!("should begin");
     SimpleLogger::new().with_utc_timestamps().init().unwrap();
 
     let n = Context::new()?;
-    let u = n.new_user(15810);
+    let u = n.new_user(474593913);
     let v = u.get_info()?.query().await?;
 
-    assert!(!v.is_null());
     println!("info: {}", v.to_string());
+    assert!(!v.is_null());
 
-    assert_eq!(v["mid"].as_i64().unwrap(), 15810);
-    assert_eq!(v["name"].as_str().unwrap(), "Mr.Quin");
+    assert_eq!(v["mid"].as_i64().unwrap(), 474593913);
+    assert_eq!(v["name"].as_str().unwrap(), "狮子神蕾欧娜_official");
+
+    let v = u.video_list(1)?.query().await?;
+    println!("info: {}", v.to_string());
+    assert!(!v.is_null());
+
+    let v = u.stat()?.query().await?;
+    println!("info: {}", v.to_string());
+    assert!(!v.is_null());
 
     let u = n.new_user(10592068);
     let v = u.get_info()?.query().await?;
