@@ -27,9 +27,10 @@
       "comment": "修改自己的信息"
     },
     "info": {
-      "url": "https://api.bilibili.com/x/space/acc/info",
+      "url": "https://api.bilibili.com/x/space/wbi/acc/info",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "mid": "int: uid"
       },
@@ -90,25 +91,27 @@
       "comment": "读取用户粉丝牌详细信息，如果隐私则不可以"
     },
     "live": {
-      "url": "https://api.bilibili.com/x/space/acc/info",
+      "url": "https://api.bilibili.com/x/space/wbi/acc/info",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "mid": "int: uid"
       },
       "comment": "直播间基本信息"
     },
     "video": {
-      "url": "https://api.bilibili.com/x/space/arc/search",
+      "url": "https://api.bilibili.com/x/space/wbi/arc/search",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "mid": "int: uid",
         "ps": "const int: 30",
         "tid": "int: 分区 ID，0 表示全部",
         "pn": "int: 页码",
         "keyword": "str: 关键词，可为空",
-        "order": "str: pubdate 上传日期，pubdate 播放量，pubdate 收藏量"
+        "order": "str: pubdate 上传日期，click 播放量，stow 收藏量"
       },
       "comment": "搜索用户视频"
     },
@@ -116,6 +119,7 @@
       "url": "https://api.bilibili.com/x/space/reservation",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "vmid": "int: uid"
       },
@@ -146,7 +150,7 @@
       "comment": "音频"
     },
     "article": {
-      "url": "https://api.bilibili.com/x/space/article",
+      "url": "https://api.bilibili.com/x/space/wbi/article",
       "method": "GET",
       "verify": false,
       "params": {
