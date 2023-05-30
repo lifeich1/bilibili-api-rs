@@ -1,7 +1,7 @@
 pub mod user;
 pub mod xlive;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Result};
 use log::{debug, trace};
 use std::sync::Arc;
 
@@ -117,7 +117,7 @@ impl ApiRequest {
     /// Do async api query, filter api response to extract result data.
     /// Use buffer if it is possible
     pub async fn query(self) -> Result<serde_json::Value> {
-        let req = self.builder.build().context("fin build request")?;
+        let req = self.builder.expect("not null builder").build()?;
         let buffer_key = req.url().to_string();
 
         if self.bufferable && !self.invalidate_flag {
@@ -129,15 +129,7 @@ impl ApiRequest {
             }
         }
 
-        let resp_txt = self
-            .ctx
-            .net
-            .execute(req)
-            .await
-            .context("do request")?
-            .text()
-            .await
-            .context("response text")?;
+        let resp_txt = self.ctx.net.execute(req).await?.text().await?;
         trace!("response text: {}", &resp_txt);
         let resp: serde_json::Value = match serde_json::from_str(&resp_txt) {
             Err(e) => {

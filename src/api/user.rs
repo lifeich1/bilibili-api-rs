@@ -1,7 +1,7 @@
 use crate::api::ApiRequest;
 use crate::api_info;
-use crate::error::ApiResult;
 use crate::Context;
+use anyhow::Result;
 
 use super::ApiRequestBuilder;
 
@@ -24,7 +24,7 @@ impl User {
     }
 
     /// Get user basic info.
-    pub fn get_info(&self) -> ApiResult<ApiRequest> {
+    pub fn get_info(&self) -> Result<ApiRequest> {
         self.rb()
             .path("info/info")
             .query(&[("mid", &self.uid)])
@@ -32,7 +32,7 @@ impl User {
     }
 
     /// Fetch user's upload video list.
-    pub fn video_list(&self, page_no: i32) -> ApiResult<ApiRequest> {
+    pub fn video_list(&self, page_no: i32) -> Result<ApiRequest> {
         let pn = page_no.to_string();
         self.rb()
             .path("info/video")
@@ -42,7 +42,7 @@ impl User {
     }
 
     /// Get honorable statistic numbers
-    pub fn stat(&self) -> ApiResult<ApiRequest> {
+    pub fn stat(&self) -> Result<ApiRequest> {
         self.rb()
             .path("info/upstat")
             .query(&[("mid", &self.uid)])

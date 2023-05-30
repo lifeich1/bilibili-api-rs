@@ -1,7 +1,7 @@
 use crate::api::ApiRequest;
 use crate::api_info;
-use crate::error::ApiResult;
 use crate::Context;
+use anyhow::Result;
 
 use super::ApiRequestBuilder;
 
@@ -71,7 +71,7 @@ impl Xlive {
         area: AreaID,
         stype: ListSortType,
         page: i32,
-    ) -> ApiResult<ApiRequest> {
+    ) -> Result<ApiRequest> {
         let pn = page.to_string();
         let pid = p_area.as_i32().to_string();
         let aid = area.as_i32().to_string();

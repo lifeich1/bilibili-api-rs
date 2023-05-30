@@ -22,9 +22,6 @@ serde = "1.0"
 log = "0.4"
 
 
-bevy = { version = "0.5", features = [], optional = true }
-futures-lite = { version = "1.11.3", optional = true }
-
 [dependencies.tokio]
 version = "1"
 features = [
@@ -39,11 +36,3 @@ features = [
 simple_logger = "1.11"
 chrono = "0.4"
 
-
-[features]
-plugin = ["bevy", "futures-lite"]
-
-
-[[example]]
-name = "bevy-task"
-required-features = ["plugin"]
