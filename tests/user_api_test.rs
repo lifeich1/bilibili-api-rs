@@ -1,9 +1,9 @@
-use bilibili_api_rs::{ApiResult, Context};
+use anyhow::Result;
 use simple_logger::SimpleLogger;
 
 //#[ignore]
 #[tokio::test]
-async fn user_api_async_test() -> ApiResult<()> {
+async fn user_api_async_test() -> Result<()> {
     println!("should begin");
     SimpleLogger::new().with_utc_timestamps().init().unwrap();
 

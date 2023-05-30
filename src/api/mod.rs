@@ -1,11 +1,11 @@
 pub mod user;
 pub mod xlive;
 
+use anyhow::{Context, Result};
 use log::{debug, trace};
 use std::sync::Arc;
 
 use crate::cache;
-use crate::error::{ApiError, ApiResult};
 use serde::Serialize;
 
 use self::user::User;
@@ -94,7 +94,7 @@ impl ApiRequestParamsBuilder {
         self
     }
 
-    fn build(self, bufferable: bool) -> ApiResult<ApiRequest> {
+    fn build(self, bufferable: bool) -> Result<ApiRequest> {
         Ok(ApiRequest {
             ctx: self.ctx.clone(),
             builder: Some(self.builder),
@@ -104,11 +104,11 @@ impl ApiRequestParamsBuilder {
     }
 
     /// Finish build progress.
-    pub fn bufferable(self) -> ApiResult<ApiRequest> {
+    pub fn bufferable(self) -> Result<ApiRequest> {
         self.build(true)
     }
 
-    pub fn nobuffer(self) -> ApiResult<ApiRequest> {
+    pub fn nobuffer(self) -> Result<ApiRequest> {
         self.build(false)
     }
 }
@@ -116,8 +116,8 @@ impl ApiRequestParamsBuilder {
 impl ApiRequest {
     /// Do async api query, filter api response to extract result data.
     /// Use buffer if it is possible
-    pub async fn query(self) -> ApiResult<serde_json::Value> {
-        let req = self.builder.expect("request already consumed!").build()?;
+    pub async fn query(self) -> Result<serde_json::Value> {
+        let req = self.builder.build().context("fin build request")?;
         let buffer_key = req.url().to_string();
 
         if self.bufferable && !self.invalidate_flag {
@@ -129,7 +129,15 @@ impl ApiRequest {
             }
         }
 
-        let resp_txt = self.ctx.net.execute(req).await?.text().await?;
+        let resp_txt = self
+            .ctx
+            .net
+            .execute(req)
+            .await
+            .context("do request")?
+            .text()
+            .await
+            .context("response text")?;
         trace!("response text: {}", &resp_txt);
         let resp: serde_json::Value = match serde_json::from_str(&resp_txt) {
             Err(e) => {
@@ -151,14 +159,14 @@ impl ApiRequest {
         Ok(r)
     }
 
-    fn filter_result(mut resp: serde_json::Value) -> ApiResult<serde_json::Value> {
+    fn filter_result(mut resp: serde_json::Value) -> Result<serde_json::Value> {
         if let Some(code) = resp["code"].as_i64() {
             if code != 0 {
                 let msg = resp["msg"]
                     .as_str()
                     .or_else(|| resp["message"].as_str())
                     .unwrap_or("detail missed");
-                Err(ApiError::remote_err(Some(code), Some(msg)))
+                bail!("bad resp, code:{} msg:{}", code, msg)
             } else {
                 Ok(if resp["data"].is_null() {
                     resp["result"].take()
@@ -167,7 +175,7 @@ impl ApiRequest {
                 })
             }
         } else {
-            Err(ApiError::remote_err(None, None))
+            bail!("empty response")
         }
     }
 
@@ -203,7 +211,7 @@ impl Context {
     /// New a context
     ///
     /// Default with cacher [`SimpleMemCacher`][crate::cache::SimpleMemCacher].
-    pub fn new() -> crate::ApiResult<Self> {
+    pub fn new() -> Result<Self> {
         Ok(Self {
             net: new_http_client()?,
             cacher: Arc::new(cache::NoCacher::default()),
@@ -230,7 +238,7 @@ impl Context {
     }
 }
 
-fn new_http_client() -> crate::ApiResult<reqwest::Client> {
+fn new_http_client() -> Result<reqwest::Client> {
     Ok(reqwest::ClientBuilder::new()
         .user_agent("Mozilla/5.0")
         .referer(false)
@@ -250,7 +258,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_new_http_client() -> crate::ApiResult<()> {
+    fn test_new_http_client() -> Result<()> {
         new_http_client()?;
         Ok(())
     }
