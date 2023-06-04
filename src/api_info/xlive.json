@@ -8,7 +8,7 @@
         "platform": "const str: web",
         "parent_area_id": "int: 大分区号",
         "area_id": "int: 子分区号",
-        "sort_type": "str: [live_time, sort_type_291]",
+        "sort_type": "str: 排序方式，live_time 最新, 不填写则为综合",
         "page": "int: 页码"
       },
       "comment": "获取分区中直播列表"
