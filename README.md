@@ -18,10 +18,15 @@ Latest released: 0.2.4
 - "GET" like api only.
 
 
-## Features
+## Design
 
-- `plugin`: enable a bevy plugin for helping emit api request as background task.
+data:
+- api
+  - user::{info, channel\_series}, video::info, xlive::info
 
+code:
+- root: user_info, user_videos, xlive_list, ...
+  - wbi: access(path, querymap, respschema)
 
 ## License
 
