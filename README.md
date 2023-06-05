@@ -25,8 +25,9 @@ data:
   - user::{info, channel\_series}, video::info, xlive::info
 
 code:
-- root: user_info, user_videos, xlive_list, ...
+- root: exports
   - wbi: access(path, querymap, respschema)
+    - wrapper user, xlive etc
 
 ## License
 

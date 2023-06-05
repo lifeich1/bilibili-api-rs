@@ -4,6 +4,8 @@
 use rpds::{RedBlackTreeMap, RedBlackTreeMapSync};
 use std::sync::{Arc, RwLock};
 
+pub mod wbi;
+
 type StateData = RedBlackTreeMapSync<String, String>;
 
 #[derive(Clone, Debug)]
