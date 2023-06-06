@@ -51,10 +51,9 @@ impl Bench {
             .clone();
     }
 
-    pub fn state(&mut self) -> serde_json::Value {
+    pub fn state(&mut self) -> StateData {
         self.fetch_state();
-        serde_json::to_value(self.base_state_.clone())
-            .expect("persistent state should be always json-like struct")
+        self.base_state_.clone()
     }
 
     pub fn commit_state(&mut self, change: impl Fn(StateData) -> StateData) {
@@ -97,33 +96,37 @@ mod tests {
         );
     }
 
+    fn json_state(bench: &mut Bench) -> serde_json::Value {
+        serde_json::to_value(bench.state()).unwrap()
+    }
+
     #[test]
     fn commit_state() {
         let mut bench = Bench::new();
-        assert_eq!(bench.state(), json!({}));
+        assert_eq!(json_state(&mut bench), json!({}));
         bench.commit_state(|s| s.insert("test".to_string(), "value".to_string()));
-        assert_eq!(bench.state(), json!({"test":"value"}));
+        assert_eq!(json_state(&mut bench), json!({"test":"value"}));
         bench.commit_state(|s| s.insert("test".to_string(), "modified".to_string()));
-        assert_eq!(bench.state(), json!({"test":"modified"}));
+        assert_eq!(json_state(&mut bench), json!({"test":"modified"}));
     }
 
     #[test]
     fn multithread_commit_state() {
         let mut bench0 = Bench::new();
-        assert_eq!(bench0.state(), json!({}));
+        assert_eq!(json_state(&mut bench0), json!({}));
 
         let mut bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".to_string(), "value".to_string()));
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(bench0.state(), json!({"test":"value"}));
+        assert_eq!(json_state(&mut bench0), json!({"test":"value"}));
 
         let mut bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".to_string(), "modified".to_string()));
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(bench0.state(), json!({"test":"modified"}));
+        assert_eq!(json_state(&mut bench0), json!({"test":"modified"}));
     }
 }
