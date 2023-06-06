@@ -32,6 +32,10 @@ impl Bench {
                     "live": live,
                     "video": video,
                     "xlive": xlive,
+                },
+                "headers": {
+                    "REFERER":  "https://www.bilibili.com",
+                    "USER_AGENT": "Mozilla/5.0",
                 }
             }),
             state_: Arc::new(RwLock::new(RedBlackTreeMap::new_sync())),
@@ -43,28 +47,22 @@ impl Bench {
         &self.data_
     }
 
-    fn fetch_state(&mut self) {
-        self.base_state_ = self
-            .state_
+    pub fn state(&self) -> StateData {
+        self.state_
             .read()
             .expect("persistent state should be always valid")
-            .clone();
-    }
-
-    pub fn state(&mut self) -> StateData {
-        self.fetch_state();
-        self.base_state_.clone()
+            .clone()
     }
 
     pub fn commit_state(&mut self, change: impl Fn(StateData) -> StateData) {
         loop {
-            self.fetch_state();
-            let fastforward = change(self.base_state_.clone());
+            let base = self.state();
+            let fastforward = change(base.clone());
             let mut guard = self
                 .state_
                 .write()
                 .expect("easy sync in commit should not be poisoned");
-            if self.base_state_ == *guard {
+            if base == *guard {
                 *guard = fastforward;
                 break;
             }
@@ -104,9 +102,9 @@ mod tests {
     fn commit_state() {
         let mut bench = Bench::new();
         assert_eq!(json_state(&mut bench), json!({}));
-        bench.commit_state(|s| s.insert("test".to_string(), "value".to_string()));
+        bench.commit_state(|s| s.insert("test".into(), "value".into()));
         assert_eq!(json_state(&mut bench), json!({"test":"value"}));
-        bench.commit_state(|s| s.insert("test".to_string(), "modified".to_string()));
+        bench.commit_state(|s| s.insert("test".into(), "modified".into()));
         assert_eq!(json_state(&mut bench), json!({"test":"modified"}));
     }
 
@@ -117,14 +115,14 @@ mod tests {
 
         let mut bench = bench0.clone();
         let hdl = thread::spawn(move || {
-            bench.commit_state(|s| s.insert("test".to_string(), "value".to_string()));
+            bench.commit_state(|s| s.insert("test".into(), "value".into()));
         });
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&mut bench0), json!({"test":"value"}));
 
         let mut bench = bench0.clone();
         let hdl = thread::spawn(move || {
-            bench.commit_state(|s| s.insert("test".to_string(), "modified".to_string()));
+            bench.commit_state(|s| s.insert("test".into(), "modified".into()));
         });
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&mut bench0), json!({"test":"modified"}));
