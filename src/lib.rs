@@ -7,24 +7,31 @@ use std::sync::{Arc, RwLock};
 pub mod wbi;
 
 type StateData = RedBlackTreeMapSync<String, String>;
+type Json = serde_json::Value;
 
 #[derive(Clone, Debug)]
 struct Bench {
-    data_: serde_json::Value,
+    data_: Json,
     state_: Arc<RwLock<StateData>>,
     base_state_: StateData,
 }
 
 impl Bench {
     pub fn new() -> Self {
-        let user: serde_json::Value = serde_json::from_str(include_str!("api_info/user.json"))
+        let user: Json = serde_json::from_str(include_str!("api_info/user.json"))
             .expect("api_info/user.json invalid");
-        let live: serde_json::Value = serde_json::from_str(include_str!("api_info/live.json"))
+        let live: Json = serde_json::from_str(include_str!("api_info/live.json"))
             .expect("api_info/live.json invalid");
-        let video: serde_json::Value = serde_json::from_str(include_str!("api_info/video.json"))
+        let video: Json = serde_json::from_str(include_str!("api_info/video.json"))
             .expect("api_info/video.json invalid");
-        let xlive: serde_json::Value = serde_json::from_str(include_str!("api_info/xlive.json"))
+        let xlive: Json = serde_json::from_str(include_str!("api_info/xlive.json"))
             .expect("api_info/xlive.json invalid");
+        let credential: Json = serde_json::from_str(include_str!("api_info/credential.json"))
+            .expect("api_info/credential.json invalid");
+        let wbi_oe: Json =
+            serde_json::from_str(include_str!("wbi_oe.json")).expect("wbi_oe.json invalid"); // this file has to be
+                                                                                             // manually maintain now,
+                                                                                             // perl tool TODO
         Self {
             data_: serde_json::json!({
                 "api": {
@@ -32,7 +39,9 @@ impl Bench {
                     "live": live,
                     "video": video,
                     "xlive": xlive,
+                    "credential": credential,
                 },
+                "wbi_oe": wbi_oe,
                 "headers": {
                     "REFERER":  "https://www.bilibili.com",
                     "USER_AGENT": "Mozilla/5.0",
@@ -43,7 +52,7 @@ impl Bench {
         }
     }
 
-    pub fn data(&self) -> &serde_json::Value {
+    pub fn data(&self) -> &Json {
         &self.data_
     }
 
@@ -54,7 +63,7 @@ impl Bench {
             .clone()
     }
 
-    pub fn commit_state(&mut self, change: impl Fn(StateData) -> StateData) {
+    pub fn commit_state(&self, change: impl Fn(StateData) -> StateData) {
         loop {
             let base = self.state();
             let fastforward = change(base.clone());
@@ -94,7 +103,7 @@ mod tests {
         );
     }
 
-    fn json_state(bench: &mut Bench) -> serde_json::Value {
+    fn json_state(bench: &mut Bench) -> Json {
         serde_json::to_value(bench.state()).unwrap()
     }
 

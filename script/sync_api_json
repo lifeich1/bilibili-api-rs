@@ -10,7 +10,7 @@ bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
 O := src/api_info
 CP := cp -av
 
-api_info_types := live user video
+api_info_types := live user video credential
 api_info_outputs := $(api_info_types:%=$(O)/%.json)
 
 
