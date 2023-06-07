@@ -136,4 +136,13 @@ mod tests {
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&mut bench0), json!({"test":"modified"}));
     }
+
+    #[test]
+    fn insure_get_nav_api_no_encwbi() {
+        let bench = Bench::new();
+        assert!(matches!(
+            bench.data()["api"]["credential"]["valid"]["wbi"],
+            Json::Null | Json::Bool(false)
+        ));
+    }
 }
