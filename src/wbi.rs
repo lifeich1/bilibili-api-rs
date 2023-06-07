@@ -8,14 +8,29 @@ use std::collections::btree_map::BTreeMap;
 
 type Json = serde_json::Value;
 
-async fn do_req(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
+async fn do_req_twice(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
+    let state = bench.state();
+    if state.get("wbi_salt").is_none() {
+        fetch_wbi_salt(bench).await?;
+    }
+    if let Ok(res) = do_req(bench, api_path.clone(), opts.clone()).await {
+        return Ok(res);
+    }
+    fetch_wbi_salt(bench).await?;
+    do_req(bench, api_path, opts).await
+}
+
+async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Json> {
     let data = bench.data();
     let cli = reqwest::Client::new();
     let mut api = &data["api"];
     for p in api_path {
         api = &api[p];
     }
-    //let ts = chrono::Local::now().timestamp();
+    if api["wbi"].as_bool().unwrap_or(false) {
+        let ts = chrono::Local::now().timestamp();
+        opts = enc_wbi(bench, opts, ts);
+    }
     let req = cli
         .request(
             api["method"].as_str().unwrap_or("GET").parse().unwrap(),
@@ -97,6 +112,78 @@ async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
     let le: String = le[..32].into();
     bench.commit_state(move |s| s.insert("wbi_salt".into(), le.clone()));
     Ok(())
+}
+
+#[derive(Clone, Debug)]
+pub struct Client {
+    bench_: Bench,
+}
+
+#[derive(Clone, Debug)]
+pub struct User(Bench, i64);
+
+#[derive(Clone, Debug)]
+pub struct Xlive(Bench, i64, i64);
+
+impl Client {
+    pub fn new() -> Self {
+        Self {
+            bench_: Bench::new(),
+        }
+    }
+
+    pub fn user(&self, mid: i64) -> User {
+        User(self.bench_.clone(), mid)
+    }
+
+    pub fn xlive(&self, area: i64, sub: i64) -> Xlive {
+        Xlive(self.bench_.clone(), area, sub)
+    }
+}
+
+impl User {
+    pub async fn info(&self) -> Result<Json> {
+        do_req_twice(
+            &self.0,
+            vec!["user", "info", "info"],
+            json!({"query":{"mid":self.1}}),
+        )
+        .await
+    }
+
+    pub async fn latest_videos(&self) -> Result<Json> {
+        do_req_twice(
+            &self.0,
+            vec!["user", "info", "video"],
+            json!({
+                "query": {
+                    "mid": self.1,
+                    "ps": 30, "tid": 0, "pn": 1,
+                    "order": "pubdate",
+                }
+            }),
+        )
+        .await
+    }
+}
+
+impl Xlive {
+    pub async fn list(&self, pn: i64) -> Result<Json> {
+        do_req_twice(
+            &self.0,
+            vec!["xlive", "info", "get_list"],
+            json!({
+                "query": {
+                    "parent_area_id": self.1,
+                    "area_id": self.2,
+                    "page": pn,
+                    "sort_type": "sort_type_291",
+                    "platform": "web",
+                }
+            }),
+        )
+        .await
+    }
 }
 
 #[cfg(test)]

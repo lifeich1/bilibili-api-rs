@@ -13,7 +13,6 @@ type Json = serde_json::Value;
 struct Bench {
     data_: Json,
     state_: Arc<RwLock<StateData>>,
-    base_state_: StateData,
 }
 
 impl Bench {
@@ -48,7 +47,6 @@ impl Bench {
                 }
             }),
             state_: Arc::new(RwLock::new(RedBlackTreeMap::new_sync())),
-            base_state_: StateData::default(),
         }
     }
 
