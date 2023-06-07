@@ -2,7 +2,7 @@
 // TODO generic do request
 use super::Bench;
 use anyhow::Result;
-use reqwest::header::{CONTENT_TYPE, REFERER, USER_AGENT};
+use reqwest::header::{REFERER, USER_AGENT};
 
 type Json = serde_json::Value;
 
@@ -35,17 +35,17 @@ async fn do_req(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> 
                 .unwrap(),
         )
         .query(&opts["query"]);
-    Ok(serde_json::to_value(req.send().await?.text().await?)?)
+    Ok(serde_json::from_str(&req.send().await?.text().await?)?)
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
-    use futures::executor::block_on;
     use serde_json::json;
 
-    #[test]
-    fn test_do_req() {
-        let res = block_on(do_req(
+    #[tokio::test]
+    async fn test_do_req() -> Result<()> {
+        let res = do_req(
             &Bench::new(),
             vec!["xlive", "info", "get_list"],
             json!({
@@ -57,8 +57,10 @@ mod tests {
                     "page": 2
                 }
             }),
-        ))
-        .unwrap();
+        )
+        .await?;
+        println!("res: {:?}", &res);
         assert_eq!(res["code"].as_i64(), Some(0));
+        Ok(())
     }
 }
