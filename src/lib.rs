@@ -5,6 +5,7 @@ use rpds::{RedBlackTreeMap, RedBlackTreeMapSync};
 use std::sync::{Arc, RwLock};
 
 pub mod wbi;
+pub use wbi::Client;
 
 type StateData = RedBlackTreeMapSync<String, String>;
 type Json = serde_json::Value;
@@ -31,6 +32,7 @@ impl Bench {
             serde_json::from_str(include_str!("wbi_oe.json")).expect("wbi_oe.json invalid"); // this file has to be
                                                                                              // manually maintain now,
                                                                                              // perl tool TODO
+        let buvid3: String = uuid::Uuid::now_v1(&[99, 11, 16, 32, 1, 7]).to_string();
         Self {
             data_: serde_json::json!({
                 "api": {
@@ -41,6 +43,10 @@ impl Bench {
                     "credential": credential,
                 },
                 "wbi_oe": wbi_oe,
+                "cookies" : {
+                    "buvid3": buvid3,
+                    "SESSDATA": "", "bili_jct": "", "DedeUserID": "",
+                },
                 "headers": {
                     "REFERER":  "https://www.bilibili.com",
                     "USER_AGENT": "Mozilla/5.0",

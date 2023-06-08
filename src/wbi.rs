@@ -2,7 +2,9 @@
 // TODO generic do request
 use super::Bench;
 use anyhow::{bail, Result};
-use reqwest::header::{REFERER, USER_AGENT};
+use log::{debug, trace};
+use regex::Regex;
+use reqwest::header::{COOKIE, REFERER, USER_AGENT};
 use serde_json::json;
 use std::collections::btree_map::BTreeMap;
 
@@ -11,13 +13,40 @@ type Json = serde_json::Value;
 async fn do_req_twice(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
     let state = bench.state();
     if state.get("wbi_salt").is_none() {
+        debug!("do_req init salt");
         fetch_wbi_salt(bench).await?;
     }
+    debug!("do_req once");
     if let Ok(res) = do_req(bench, api_path.clone(), opts.clone()).await {
+        debug!("do_req once done");
         return Ok(res);
     }
+    debug!("do_req twice: fetch_wbi_salt");
     fetch_wbi_salt(bench).await?;
+    debug!("do_req twice");
     do_req(bench, api_path, opts).await
+}
+
+fn gen_cookie(bench: &Bench) -> String {
+    let data = bench.data();
+    data["cookies"]
+        .as_object()
+        .expect("data[cookies] should be map")
+        .iter()
+        .map(|t| {
+            format!(
+                "{}={}",
+                t.0,
+                t.1.as_str().expect("cookie value should be str")
+            )
+        })
+        .fold(String::new(), |acc, s| {
+            if acc.len() > 0 {
+                format!("{}; {}", acc, s)
+            } else {
+                s
+            }
+        })
 }
 
 async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Json> {
@@ -37,6 +66,12 @@ async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Js
             api["url"].as_str().unwrap(),
         )
         .header(
+            COOKIE,
+            gen_cookie(bench)
+                .parse::<reqwest::header::HeaderValue>()
+                .unwrap(),
+        )
+        .header(
             REFERER,
             data["headers"]["REFERER"]
                 .as_str()
@@ -53,6 +88,7 @@ async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Js
                 .unwrap(),
         )
         .query(&opts["query"]);
+    trace!("request sending: {:?}", &req);
     Ok(serde_json::from_str(&req.send().await?.text().await?)?)
 }
 
@@ -62,7 +98,11 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
     for (k, v) in opts["query"].as_object().expect("query not json object") {
         qs.insert(
             k,
-            serde_json::to_string(v).expect("query value to_string error"),
+            if v.is_string() {
+                v.as_str().unwrap().to_owned()
+            } else {
+                serde_json::to_string(v).expect("query value to_string error")
+            },
         );
     }
     let uq: String = qs
@@ -97,7 +137,28 @@ async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
     let Some(suburl) = nav["data"]["wbi_img"]["sub_url"].as_str() else {
         bail!("fetch_wbi_salt: wbi_img/sub_url invalid");
     };
-    let ae: String = imgurl.to_owned() + suburl;
+    let le = wbi_salt_compute(bench, imgurl, suburl);
+    bench.commit_state(move |s| s.insert("wbi_salt".into(), le.clone()));
+    Ok(())
+}
+
+fn wbi_parse_ae(imgurl: &str, suburl: &str) -> Option<String> {
+    let Ok(re) = Regex::new(r"https://i0\.hdslb\.com/bfs/wbi/(\w+)\.png") else {
+        return None;
+    };
+    let img = re.captures(imgurl)?.get(1)?.as_str();
+    let sub = re.captures(suburl)?.get(1)?.as_str();
+    Some(img.to_owned() + sub)
+}
+
+fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
+    let ae: String = match wbi_parse_ae(imgurl, suburl) {
+        Some(s) => s,
+        None => {
+            imgurl[imgurl.len() - 36..imgurl.len() - 4].to_owned()
+                + &suburl[suburl.len() - 36..suburl.len() - 4]
+        }
+    };
     let oe: Vec<i64> = bench.data()["wbi_oe"]
         .as_array()
         .expect("wbi_oe not array")
@@ -109,9 +170,7 @@ async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
         .filter(|x| **x < ae.len() as i64)
         .map(|x| *x as usize)
         .fold(String::new(), |acc, x| acc + &ae[x..(x + 1)]);
-    let le: String = le[..32].into();
-    bench.commit_state(move |s| s.insert("wbi_salt".into(), le.clone()));
-    Ok(())
+    le[..32].into()
 }
 
 #[derive(Clone, Debug)]
@@ -146,7 +205,12 @@ impl User {
         do_req_twice(
             &self.0,
             vec!["user", "info", "info"],
-            json!({"query":{"mid":self.1}}),
+            json!({"query":{
+                "mid":self.1,
+                "token": "",
+                "platform": "web",
+                "web_location": 1550101,
+            }}),
         )
         .await
     }
@@ -160,6 +224,7 @@ impl User {
                     "mid": self.1,
                     "ps": 30, "tid": 0, "pn": 1,
                     "order": "pubdate",
+                    "keyword": "",
                 }
             }),
         )
@@ -190,6 +255,17 @@ impl Xlive {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_wbi_salt_compute() {
+        let bench = Bench::new();
+        let le = wbi_salt_compute(
+            &bench,
+            "https://i0.hdslb.com/bfs/wbi/e130e5f398924e569b7cca9f4713ec63.png",
+            "https://i0.hdslb.com/bfs/wbi/65c711c1f26b475a9305dad9f9903782.png",
+        );
+        assert_eq!(le, "5a73a9f6609390773b53586cce514c2e");
+    }
 
     #[tokio::test]
     async fn test_do_req() -> Result<()> {
@@ -246,6 +322,39 @@ mod tests {
                     "w_rid": "dc7bb638dc082c354fd9624b72374f3b",
                     "mid": 213741,
                     "wts": 1686163791,
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn test_enc_wbi2() {
+        let salt = "5a73a9f6609390773b53586cce514c2e";
+        let bench = Bench::new();
+        bench.commit_state(|s| s.insert("wbi_salt".into(), salt.to_owned()));
+        let opts = enc_wbi(
+            &bench,
+            json!({
+                "query": {
+                    "mid": 1472906636,
+                    "token": "",
+                    "platform": "web",
+                    "web_location": 1550101,
+                }
+            }),
+            1686230003,
+        );
+        assert_eq!(
+            opts,
+            json!({
+                "_uq": "mid=1472906636&platform=web&token=&web_location=1550101&wts=1686230003",
+                "query": {
+                    "wts": 1686230003,
+                    "w_rid": "9946c05f7b3d5a8505a97e1b8daab2be",
+                    "mid": 1472906636,
+                    "token": "",
+                    "platform": "web",
+                    "web_location": 1550101,
                 },
             })
         );
