@@ -13,7 +13,7 @@
 //! async fn test_xlive() -> Result<()> {
 //!     let cli = Client::new();
 //!     let xlive = cli.xlive();
-//!     let lives = xlive.lise(2).await?;
+//!     let lives = xlive.list(2).await?;
 //!     Ok(())
 //! }
 //! ```
