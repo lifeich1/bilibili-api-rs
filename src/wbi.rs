@@ -204,16 +204,19 @@ impl Client {
         }
     }
 
+    /// mid is uid
     pub fn user(&self, mid: i64) -> User {
         User(self.bench_.clone(), mid)
     }
 
+    /// Renaming for logical. area is 'parent_area_id', sub is 'area_id'.
     pub fn xlive(&self, area: i64, sub: i64) -> Xlive {
         Xlive(self.bench_.clone(), area, sub)
     }
 }
 
 impl User {
+    /// Check api_info/user:info/info
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -228,6 +231,7 @@ impl User {
         .await
     }
 
+    /// Check api_info/user:info/video
     pub async fn latest_videos(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -246,6 +250,7 @@ impl User {
 }
 
 impl Xlive {
+    /// Check api_info/xlive:info/get_list
     pub async fn list(&self, pn: i64) -> Result<Json> {
         do_api_req(
             &self.0,

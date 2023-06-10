@@ -1,6 +1,22 @@
 //! bilibili-api-rs is a rust library project got inspiration from [bilibili-api](https://github.com/Passkou/bilibili-api).
 //!
+//! Currently "GET" apis only. Api interface `User`, `Xlive` derive from
+//! [Client][crate::wbi::Client].
+//!
+//! Api result is part of response, alike [bilibili-api](https://github.com/Passkou/bilibili-api),
+//! is response["data"]. Invalid response treated as error then bail.
+//!
 //! ## Example
+//! ```
+//! use bilibili_api_rs::Client;
+//! #[tokio::test]
+//! async fn test_xlive() -> Result<()> {
+//!     let cli = Client::new();
+//!     let xlive = cli.xlive();
+//!     let lives = xlive.lise(2).await?;
+//!     Ok(())
+//! }
+//! ```
 use rpds::{RedBlackTreeMap, RedBlackTreeMapSync};
 use std::sync::{Arc, RwLock};
 
@@ -83,6 +99,27 @@ impl Bench {
     }
 }
 
+/// Lodash-like get helper, implemented for serde_json
+///
+/// ```
+/// use bilibili_api_rs::Lodash;
+/// # use serde_json::json;
+/// let v = json!({
+///     "following": [ {
+///         "mid": 1472906636,
+///         "name": "ywwuyi",
+///     }, {
+///         "mid": 15810,
+///         "name": "Mr.Quin",
+///     }],
+/// });
+/// assert_eq!(v.got(vec!["following", "0", "mid"]), &json!(1472906636));
+/// assert_eq!(v["following"].at(vec![
+///         vec!["0", "name"],
+///         vec!["1", "name"]
+///     ]),
+///     vec![&json!("ywwuyi"), &json!("Mr.Quin")]);
+/// ```
 pub trait Lodash {
     fn got(&self, path: Vec<&str>) -> &Self;
     fn at(&self, paths: Vec<Vec<&str>>) -> Vec<&Self>;
@@ -92,7 +129,11 @@ impl Lodash for Json {
     fn got(&self, path: Vec<&str>) -> &Self {
         let mut v = self;
         for p in path {
-            v = &v[p];
+            v = if v.is_array() {
+                &v[p.parse::<usize>().unwrap_or(0)]
+            } else {
+                &v[p]
+            };
         }
         v
     }
