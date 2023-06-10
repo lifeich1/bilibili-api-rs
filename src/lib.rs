@@ -215,14 +215,14 @@ mod tests {
         let mut bench0 = Bench::new();
         assert_eq!(json_state(&mut bench0), json!({}));
 
-        let mut bench = bench0.clone();
+        let bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".into(), "value".into()));
         });
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&mut bench0), json!({"test":"value"}));
 
-        let mut bench = bench0.clone();
+        let bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".into(), "modified".into()));
         });
