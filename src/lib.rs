@@ -83,11 +83,59 @@ impl Bench {
     }
 }
 
+pub trait Lodash {
+    fn got(&self, path: Vec<&str>) -> &Self;
+    fn at(&self, paths: Vec<Vec<&str>>) -> Vec<&Self>;
+}
+
+impl Lodash for Json {
+    fn got(&self, path: Vec<&str>) -> &Self {
+        let mut v = self;
+        for p in path {
+            v = &v[p];
+        }
+        v
+    }
+
+    fn at(&self, paths: Vec<Vec<&str>>) -> Vec<&Self> {
+        let mut paths = paths;
+        paths
+            .drain(..)
+            .map(|path: Vec<&str>| self.got(path))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
     use std::thread;
+
+    #[test]
+    fn test_lodash_got() {
+        let bench = Bench::new();
+        let v = bench.data();
+        assert_eq!(
+            v.got(vec!["headers", "REFERER"]),
+            &json!("https://www.bilibili.com")
+        );
+        assert_eq!(v.got(vec!["headers", "__must_null__"]), &json!(()));
+    }
+
+    #[test]
+    fn test_lodash_at() {
+        let bench = Bench::new();
+        let v = bench.data();
+        assert_eq!(
+            v.at(vec![
+                vec!["headers", "REFERER"],
+                vec!["headers", "__must_null__"],
+                vec!["cookies", "SESSDATA"],
+            ]),
+            vec![&json!("https://www.bilibili.com"), &json!(()), &json!("")]
+        );
+    }
 
     #[test]
     fn validate_wbi_user_info() {

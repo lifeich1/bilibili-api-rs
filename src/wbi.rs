@@ -1,6 +1,6 @@
 // TODO encwbi
 // TODO generic do request
-use super::Bench;
+use super::{Bench, Lodash};
 use anyhow::{bail, Result};
 use log::{debug, trace};
 use regex::Regex;
@@ -9,6 +9,22 @@ use serde_json::json;
 use std::collections::btree_map::BTreeMap;
 
 type Json = serde_json::Value;
+
+async fn do_api_req(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
+    api_result_validate(do_req_twice(bench, api_path, opts).await?)
+}
+
+fn api_result_validate(mut resp: Json) -> Result<Json> {
+    if matches!(resp["code"].as_i64(), Some(0)) {
+        Ok(resp["data"].take())
+    } else {
+        bail!(
+            "bilibili api reject: {} {}",
+            resp["code"].as_i64().unwrap_or(-1),
+            resp["message"].as_str().unwrap_or("unknown")
+        );
+    }
+}
 
 async fn do_req_twice(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
     let state = bench.state();
@@ -52,10 +68,7 @@ fn gen_cookie(bench: &Bench) -> String {
 async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Json> {
     let data = bench.data();
     let cli = reqwest::Client::new();
-    let mut api = &data["api"];
-    for p in api_path {
-        api = &api[p];
-    }
+    let api = data["api"].got(api_path);
     if api["wbi"].as_bool().unwrap_or(false) {
         let ts = chrono::Local::now().timestamp();
         opts = enc_wbi(bench, opts, ts);
@@ -202,7 +215,7 @@ impl Client {
 
 impl User {
     pub async fn info(&self) -> Result<Json> {
-        do_req_twice(
+        do_api_req(
             &self.0,
             vec!["user", "info", "info"],
             json!({"query":{
@@ -216,7 +229,7 @@ impl User {
     }
 
     pub async fn latest_videos(&self) -> Result<Json> {
-        do_req_twice(
+        do_api_req(
             &self.0,
             vec!["user", "info", "video"],
             json!({
@@ -234,7 +247,7 @@ impl User {
 
 impl Xlive {
     pub async fn list(&self, pn: i64) -> Result<Json> {
-        do_req_twice(
+        do_api_req(
             &self.0,
             vec!["xlive", "info", "get_list"],
             json!({
