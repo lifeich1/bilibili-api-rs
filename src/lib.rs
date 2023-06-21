@@ -113,37 +113,54 @@ impl Bench {
 ///         "name": "Mr.Quin",
 ///     }],
 /// });
-/// assert_eq!(v.got(vec!["following", "0", "mid"]), &json!(1472906636));
-/// assert_eq!(v["following"].at(vec![
-///         vec!["0", "name"],
-///         vec!["1", "name"]
-///     ]),
-///     vec![&json!("ywwuyi"), &json!("Mr.Quin")]);
+/// assert_eq!(v.at(json!(["following", 0, "mid"])), json!(1472906636));
+/// assert_eq!(v["following"].at(json!([
+///         [0, "name"],
+///         [1, "name"],
+///     ])),
+///     json!(["ywwuyi", "Mr.Quin"]));
 /// ```
 pub trait Lodash {
-    fn got(&self, path: Vec<&str>) -> &Self;
-    fn at(&self, paths: Vec<Vec<&str>>) -> Vec<&Self>;
+    fn at(&self, paths: Json) -> Self;
+}
+
+fn lodash_step<'a>(v: &'a Json, p: &Json) -> &'a Json {
+    match p {
+        Json::Number(n) => &v[n.as_i64().unwrap() as usize],
+        Json::String(s) => &v[s],
+        _ => &Json::Null,
+    }
+}
+
+fn lodash_get<'a>(v: &'a Json, path: &Json) -> &'a Json {
+    let Json::Array(path) = path  else {
+        return &Json::Null;
+    };
+    if path.is_empty() {
+        return v;
+    }
+    let mut it = path.iter();
+    let mut v = lodash_step(v, it.next().unwrap());
+    for p in it {
+        v = lodash_step(&v, p);
+    }
+    v
 }
 
 impl Lodash for Json {
-    fn got(&self, path: Vec<&str>) -> &Self {
-        let mut v = self;
-        for p in path {
-            v = if v.is_array() {
-                &v[p.parse::<usize>().unwrap_or(0)]
-            } else {
-                &v[p]
-            };
+    fn at(&self, paths: Json) -> Self {
+        let Some(a) = paths.as_array() else {
+            return Json::Null;
+        };
+        if a[0].is_array() {
+            let mut v: Vec<Json> = Vec::new();
+            for path in a {
+                v.push(lodash_get(self, path).clone())
+            }
+            Json::Array(v)
+        } else {
+            lodash_get(self, &paths).clone()
         }
-        v
-    }
-
-    fn at(&self, paths: Vec<Vec<&str>>) -> Vec<&Self> {
-        let mut paths = paths;
-        paths
-            .drain(..)
-            .map(|path: Vec<&str>| self.got(path))
-            .collect()
     }
 }
 
@@ -154,27 +171,20 @@ mod tests {
     use std::thread;
 
     #[test]
-    fn test_lodash_got() {
-        let bench = Bench::new();
-        let v = bench.data();
-        assert_eq!(
-            v.got(vec!["headers", "REFERER"]),
-            &json!("https://www.bilibili.com")
-        );
-        assert_eq!(v.got(vec!["headers", "__must_null__"]), &json!(()));
-    }
-
-    #[test]
     fn test_lodash_at() {
         let bench = Bench::new();
         let v = bench.data();
         assert_eq!(
-            v.at(vec![
-                vec!["headers", "REFERER"],
-                vec!["headers", "__must_null__"],
-                vec!["cookies", "SESSDATA"],
-            ]),
-            vec![&json!("https://www.bilibili.com"), &json!(()), &json!("")]
+            v.at(json!([
+                ["headers", "REFERER"],
+                ["headers", "__must_null__"],
+                ["cookies", "SESSDATA"],
+            ])),
+            json!(["https://www.bilibili.com", (), ""])
+        );
+        assert_eq!(
+            v.at(json!(["headers", "REFERER"])),
+            json!("https://www.bilibili.com")
         );
     }
 

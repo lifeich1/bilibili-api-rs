@@ -10,7 +10,7 @@ use std::collections::btree_map::BTreeMap;
 
 type Json = serde_json::Value;
 
-async fn do_api_req(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
+async fn do_api_req(bench: &Bench, api_path: Json, opts: Json) -> Result<Json> {
     api_result_validate(do_req_twice(bench, api_path, opts).await?)
 }
 
@@ -26,7 +26,7 @@ fn api_result_validate(mut resp: Json) -> Result<Json> {
     }
 }
 
-async fn do_req_twice(bench: &Bench, api_path: Vec<&str>, opts: Json) -> Result<Json> {
+async fn do_req_twice(bench: &Bench, api_path: Json, opts: Json) -> Result<Json> {
     let state = bench.state();
     if state.get("wbi_salt").is_none() {
         debug!("do_req init salt");
@@ -65,10 +65,10 @@ fn gen_cookie(bench: &Bench) -> String {
         })
 }
 
-async fn do_req(bench: &Bench, api_path: Vec<&str>, mut opts: Json) -> Result<Json> {
+async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
     let data = bench.data();
     let cli = reqwest::Client::new();
-    let api = data["api"].got(api_path);
+    let api = data["api"].at(api_path);
     if api["wbi"].as_bool().unwrap_or(false) {
         let ts = chrono::Local::now().timestamp();
         opts = enc_wbi(bench, opts, ts);
@@ -143,7 +143,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
 }
 
 async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
-    let nav = do_req(bench, vec!["credential", "valid"], json!({})).await?;
+    let nav = do_req(bench, json!(["credential", "valid"]), json!({})).await?;
     let Some(imgurl) = nav["data"]["wbi_img"]["img_url"].as_str() else {
         bail!("fetch_wbi_salt: wbi_img/img_url invalid");
     };
@@ -226,7 +226,7 @@ impl User {
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
-            vec!["user", "info", "info"],
+            json!(["user", "info", "info"]),
             json!({"query":{
                 "mid":self.1,
                 "token": "",
@@ -241,7 +241,7 @@ impl User {
     pub async fn latest_videos(&self) -> Result<Json> {
         do_api_req(
             &self.0,
-            vec!["user", "info", "video"],
+            json!(["user", "info", "video"]),
             json!({
                 "query": {
                     "mid": self.1,
@@ -260,7 +260,7 @@ impl Xlive {
     pub async fn list(&self, pn: i64) -> Result<Json> {
         do_api_req(
             &self.0,
-            vec!["xlive", "info", "get_list"],
+            json!(["xlive", "info", "get_list"]),
             json!({
                 "query": {
                     "parent_area_id": self.1,
@@ -295,7 +295,7 @@ mod tests {
     async fn test_do_req() -> Result<()> {
         let res = do_req(
             &Bench::new(),
-            vec!["xlive", "info", "get_list"],
+            json!(["xlive", "info", "get_list"]),
             json!({
                 "query": {
                     "platform": "web",
