@@ -142,7 +142,7 @@ fn lodash_get<'a>(v: &'a Json, path: &Json) -> &'a Json {
     let mut it = path.iter();
     let mut v = lodash_step(v, it.next().unwrap());
     for p in it {
-        v = lodash_step(&v, p);
+        v = lodash_step(v, p);
     }
     v
 }
