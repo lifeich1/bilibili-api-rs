@@ -57,7 +57,7 @@ fn gen_cookie(bench: &Bench) -> String {
             )
         })
         .fold(String::new(), |acc, s| {
-            if acc.len() > 0 {
+            if !acc.is_empty() {
                 format!("{}; {}", acc, s)
             } else {
                 s
@@ -122,7 +122,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
         .iter()
         .map(|t| format!("{}={}", t.0, t.1))
         .fold(String::new(), |acc, q| {
-            if acc.len() > 0 {
+            if !acc.is_empty() {
                 acc + "&" + &q
             } else {
                 q
@@ -135,7 +135,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
         "{:x}",
         md5::compute(
             uq + state
-                .get("wbi_salt".into())
+                .get("wbi_salt")
                 .expect("salt should be prepared before enc_wbi")
         )
     ));
@@ -212,6 +212,12 @@ impl Client {
     /// Renaming for logical. area is 'parent_area_id', sub is 'area_id'.
     pub fn xlive(&self, area: i64, sub: i64) -> Xlive {
         Xlive(self.bench_.clone(), area, sub)
+    }
+}
+
+impl Default for Client {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
