@@ -1,6 +1,6 @@
 [package]
 name = "bilibili-api-rs"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["lifeich1 <lintd23@outlook.com>"]
 edition = "2021"
 description = "A rust library project got inspiration from Passkou/bilibili-api"
