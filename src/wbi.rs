@@ -1,5 +1,4 @@
-// TODO encwbi
-// TODO generic do request
+//! WBI means "web bibilili interface".
 use super::{Bench, Lodash};
 use anyhow::{bail, Result};
 use log::{debug, trace};
@@ -186,18 +185,22 @@ fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
     le[..32].into()
 }
 
+/// The root client base, see also [TOP][crate].
 #[derive(Clone, Debug)]
 pub struct Client {
     bench_: Bench,
 }
 
+/// Remember user id and do GETs.
 #[derive(Clone, Debug)]
 pub struct User(Bench, i64);
 
+/// Remember parent area id and sub area id then do GETs.
 #[derive(Clone, Debug)]
 pub struct Xlive(Bench, i64, i64);
 
 impl Client {
+    /// Create a default instance.
     pub fn new() -> Self {
         Self {
             bench_: Bench::new(),
@@ -222,7 +225,9 @@ impl Default for Client {
 }
 
 impl User {
-    /// Check *api_info/user:info/info*
+    /// See also [*api_info/user:info/info*][api_info/user]
+    ///
+    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -237,7 +242,9 @@ impl User {
         .await
     }
 
-    /// Check *api_info/user:info/video*
+    /// See also [*api_info/user:info/video*][api_info/user]
+    ///
+    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
     pub async fn latest_videos(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -256,7 +263,9 @@ impl User {
 }
 
 impl Xlive {
-    /// Check *api_info/xlive:info/get_list*
+    /// Check [*api_info/xlive:info/get_list*][api_info/xlive]
+    ///
+    /// [api_info/xlive]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/xlive.json
     pub async fn list(&self, pn: i64) -> Result<Json> {
         do_api_req(
             &self.0,

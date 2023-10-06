@@ -1,3 +1,4 @@
+#![warn(missing_docs)]
 //! bilibili-api-rs is a rust library project got inspiration from [bilibili-api](https://github.com/Passkou/bilibili-api).
 //!
 //! Currently "GET" apis only. Api interface `User`, `Xlive` derive from
@@ -5,6 +6,8 @@
 //!
 //! Api result is part of response, alike [bilibili-api](https://github.com/Passkou/bilibili-api),
 //! is response["data"]. Invalid response treated as error then bail.
+//!
+//! *High overhead*: to anti-detect, client open one whole new connection in every request.
 //!
 //! ## Example
 //! ```
@@ -121,6 +124,7 @@ impl Bench {
 ///     json!(["ywwuyi", "Mr.Quin"]));
 /// ```
 pub trait Lodash {
+    /// Input a matrix, output a vector; input a vector, output single one value
     fn at(&self, paths: Json) -> Self;
 }
 
