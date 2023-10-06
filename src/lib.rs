@@ -9,10 +9,10 @@
 //! ## Example
 //! ```
 //! use bilibili_api_rs::Client;
-//! #[tokio::test]
+//! use anyhow::Result;
 //! async fn test_xlive() -> Result<()> {
 //!     let cli = Client::new();
-//!     let xlive = cli.xlive();
+//!     let xlive = cli.xlive(/*virtual*/9, /*all*/0);
 //!     let lives = xlive.list(2).await?;
 //!     Ok(())
 //! }
@@ -133,7 +133,7 @@ fn lodash_step<'a>(v: &'a Json, p: &Json) -> &'a Json {
 }
 
 fn lodash_get<'a>(v: &'a Json, path: &Json) -> &'a Json {
-    let Json::Array(path) = path  else {
+    let Json::Array(path) = path else {
         return &Json::Null;
     };
     if path.is_empty() {
