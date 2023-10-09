@@ -142,7 +142,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
 }
 
 async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
-    let nav = do_req(bench, json!(["credential", "valid"]), json!({})).await?;
+    let nav = do_req(bench, json!(["credential", "info", "valid"]), json!({})).await?;
     let Some(imgurl) = nav["data"]["wbi_img"]["img_url"].as_str() else {
         bail!("fetch_wbi_salt: wbi_img/img_url invalid");
     };
