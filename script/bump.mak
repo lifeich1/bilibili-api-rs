@@ -9,8 +9,10 @@ vern = $(MAJOR_VER).$(MINOR_VER).$(PATCH_VER)
 all:
 	perl -p -i -e \
 		's/\Aversion = "\d+\.\d+\.\d+"/version = "$(vern)"/' \
-		./Cargo.toml
+		./bilibili-api-rs/Cargo.toml
 	perl -p -i -e \
 		's/\ALatest released: \d+\.\d+\.\d+/Latest released: $(vern)/' \
 		./README.md
 	git commit -a -m ":bookmark: bump to v$(vern)" -e
+	git tag -a -s -m "Auto tag by bump.mak" v$(vern)
+	gh release create v$(vern) --generate-notes

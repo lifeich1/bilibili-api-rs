@@ -7,7 +7,7 @@
 PASSKOU_BILIBILI_API_REPO_HOME ?= $(abspath ../../z/github.com/Nemo2011/bilibili-api)
 
 bapi_info_root := $(PASSKOU_BILIBILI_API_REPO_HOME)/bilibili_api/data/api
-O := src/api_info
+O := bilibili-api-rs/src/api_info
 CP := cp -av
 
 api_info_types := live user video credential

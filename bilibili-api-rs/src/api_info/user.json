@@ -46,11 +46,13 @@
       "comment": "用户个人空间公告"
     },
     "user_tag": {
-      "url": "http://space.bilibili.com/ajax/tags/getSubList",
+      "url": "https://api.bilibili.com/x/space/tag/sub/list",
       "method": "GET",
       "verify": false,
       "params": {
-        "mid": "int: uid"
+        "vmid": "int: uid",
+        "pn": "int: 页码",
+        "ps":"int: 每页项数"
       },
       "comment": "用户关注的 TAG / 话题,认证方式：SESSDATA"
     },
@@ -190,7 +192,8 @@
         "vmid": "int: uid",
         "pn": "int: 页码",
         "ps": "const int: 15",
-        "type": "int: 1 追番，2 追剧"
+        "type": "int: 1 追番，2 追剧",
+        "follow_status": "0 全部 1 想看 2 在看 3 看过"
       },
       "comment": "用户追番列表"
     },
@@ -216,11 +219,13 @@
       "comment": "获取用户所有关注（需要用户公开信息）"
     },
     "all_followings2": {
-      "url": "https://app.biliapi.net/x/v2/relation/followings",
+      "url": "https://api.bilibili.com/x/relation/followings",
       "method": "GET",
-      "verify": false,
+      "verify": true,
       "params": {
         "vmid": "int: uid",
+        "order": "str: desc 倒序, asc 正序",
+        "order_type": "str: 按照关注顺序排列：留空 按照最常访问排列：attention",
         "pn": "int: 页码",
         "ps":"const int: 100"
       },
@@ -280,6 +285,19 @@
       "verify": true,
       "params": {
         "pn": "int: 页码",
+        "ps": "const int: 100"
+      },
+      "comment": "用户浏览历史记录（旧版）"
+    },
+    "history_new": {
+      "url": "https://api.bilibili.com/x/web-interface/history/cursor",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "type": "all：全部类型（默认）archive：稿件 live：直播 article：文章",
+        "view_at": "int: 时间戳，获取此时间戳之前的历史记录",
+        "business": "历史记录截止目标业务类型 默认为空 archive：稿件 pgc：剧集（番剧 / 影视） live：直播 article-list：文集 article：文章",
+        "max": "历史记录截止目标 oid",
         "ps": "const int: 100"
       },
       "comment": "用户浏览历史记录"
@@ -416,6 +434,15 @@
       "method": "GET",
       "verify": true,
       "comment": "获取自己风纪委员信息"
+    },
+    "elec_user_monthly": {
+      "url": "https://api.bilibili.com/x/ugcpay-rank/elec/month/up",
+      "method": "GET",
+      "verify": true,
+      "params": {
+        "up_mid": "int: uid 号"
+      },
+      "comment": "获取空间充电公示列表"
     }
   },
   "operate": {
