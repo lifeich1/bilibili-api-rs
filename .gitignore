@@ -27,4 +27,3 @@ tags
 # Added by cargo
 
 /target
-Cargo.lock
