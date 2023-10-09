@@ -43,7 +43,7 @@ impl Bench {
             .expect("api_info/live.json invalid");
         let video: Json = serde_json::from_str(include_str!("api_info/video.json"))
             .expect("api_info/video.json invalid");
-        let xlive: Json = serde_json::from_str(include_str!("api_info/xlive.json"))
+        let api_xlive: Json = serde_json::from_str(include_str!("api_info/xlive.json"))
             .expect("api_info/xlive.json invalid");
         let credential: Json = serde_json::from_str(include_str!("api_info/credential.json"))
             .expect("api_info/credential.json invalid");
@@ -58,7 +58,7 @@ impl Bench {
                     "user": user,
                     "live": live,
                     "video": video,
-                    "xlive": xlive,
+                    "xlive": api_xlive,
                     "credential": credential,
                 },
                 "wbi_oe": wbi_oe,
@@ -75,7 +75,7 @@ impl Bench {
         }
     }
 
-    pub fn data(&self) -> &Json {
+    pub const fn data(&self) -> &Json {
         &self.data_
     }
 
@@ -96,13 +96,14 @@ impl Bench {
                 .expect("easy sync in commit should not be poisoned");
             if base == *guard {
                 *guard = fastforward;
+                std::mem::drop(guard);
                 break;
             }
         }
     }
 }
 
-/// Lodash-like get helper, implemented for serde_json
+/// Lodash-like get helper, implemented for `serde_json`
 ///
 /// ```
 /// use bilibili_api_rs::Lodash;
@@ -125,12 +126,13 @@ impl Bench {
 /// ```
 pub trait Lodash {
     /// Input a matrix, output a vector; input a vector, output single one value
+    #[must_use]
     fn at(&self, paths: Json) -> Self;
 }
 
 fn lodash_step<'a>(v: &'a Json, p: &Json) -> &'a Json {
     match p {
-        Json::Number(n) => &v[n.as_i64().unwrap() as usize],
+        Json::Number(n) => &v[n.as_u64().map(usize::try_from).unwrap().unwrap()],
         Json::String(s) => &v[s],
         _ => &Json::Null,
     }
@@ -154,14 +156,14 @@ fn lodash_get<'a>(v: &'a Json, path: &Json) -> &'a Json {
 impl Lodash for Json {
     fn at(&self, paths: Json) -> Self {
         let Some(a) = paths.as_array() else {
-            return Json::Null;
+            return Self::Null;
         };
         if a[0].is_array() {
-            let mut v: Vec<Json> = Vec::new();
+            let mut v: Vec<Self> = Vec::new();
             for path in a {
-                v.push(lodash_get(self, path).clone())
+                v.push(lodash_get(self, path).clone());
             }
-            Json::Array(v)
+            Self::Array(v)
         } else {
             lodash_get(self, &paths).clone()
         }
@@ -210,38 +212,38 @@ mod tests {
         );
     }
 
-    fn json_state(bench: &mut Bench) -> Json {
+    fn json_state(bench: &Bench) -> Json {
         serde_json::to_value(bench.state()).unwrap()
     }
 
     #[test]
     fn commit_state() {
-        let mut bench = Bench::new();
-        assert_eq!(json_state(&mut bench), json!({}));
+        let bench = Bench::new();
+        assert_eq!(json_state(&bench), json!({}));
         bench.commit_state(|s| s.insert("test".into(), "value".into()));
-        assert_eq!(json_state(&mut bench), json!({"test":"value"}));
+        assert_eq!(json_state(&bench), json!({"test":"value"}));
         bench.commit_state(|s| s.insert("test".into(), "modified".into()));
-        assert_eq!(json_state(&mut bench), json!({"test":"modified"}));
+        assert_eq!(json_state(&bench), json!({"test":"modified"}));
     }
 
     #[test]
     fn multithread_commit_state() {
-        let mut bench0 = Bench::new();
-        assert_eq!(json_state(&mut bench0), json!({}));
+        let bench0 = Bench::new();
+        assert_eq!(json_state(&bench0), json!({}));
 
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".into(), "value".into()));
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(json_state(&mut bench0), json!({"test":"value"}));
+        assert_eq!(json_state(&bench0), json!({"test":"value"}));
 
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| s.insert("test".into(), "modified".into()));
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(json_state(&mut bench0), json!({"test":"modified"}));
+        assert_eq!(json_state(&bench0), json!({"test":"modified"}));
     }
 
     #[test]

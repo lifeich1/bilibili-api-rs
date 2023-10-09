@@ -56,10 +56,10 @@ fn gen_cookie(bench: &Bench) -> String {
             )
         })
         .fold(String::new(), |acc, s| {
-            if !acc.is_empty() {
-                format!("{}; {}", acc, s)
-            } else {
+            if acc.is_empty() {
                 s
+            } else {
+                format!("{acc}; {s}")
             }
         })
 }
@@ -121,10 +121,10 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
         .iter()
         .map(|t| format!("{}={}", t.0, t.1))
         .fold(String::new(), |acc, q| {
-            if !acc.is_empty() {
-                acc + "&" + &q
-            } else {
+            if acc.is_empty() {
                 q
+            } else {
+                acc + "&" + &q
             }
         });
     opts["_uq"] = uq.clone().into();
@@ -164,13 +164,10 @@ fn wbi_parse_ae(imgurl: &str, suburl: &str) -> Option<String> {
 }
 
 fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
-    let ae: String = match wbi_parse_ae(imgurl, suburl) {
-        Some(s) => s,
-        None => {
-            imgurl[imgurl.len() - 36..imgurl.len() - 4].to_owned()
-                + &suburl[suburl.len() - 36..suburl.len() - 4]
-        }
-    };
+    let ae: String = wbi_parse_ae(imgurl, suburl).unwrap_or_else(|| {
+        imgurl[imgurl.len() - 36..imgurl.len() - 4].to_owned()
+            + &suburl[suburl.len() - 36..suburl.len() - 4]
+    });
     let oe: Vec<i64> = bench.data()["wbi_oe"]
         .as_array()
         .expect("wbi_oe not array")
@@ -179,9 +176,9 @@ fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
         .collect();
     let le: String = oe
         .iter()
-        .filter(|x| **x < ae.len() as i64)
-        .map(|x| *x as usize)
-        .fold(String::new(), |acc, x| acc + &ae[x..(x + 1)]);
+        .filter_map(|x| usize::try_from(*x).ok())
+        .filter(|x| *x < ae.len())
+        .fold(String::new(), |acc, x| acc + &ae[x..=x]);
     le[..32].into()
 }
 
@@ -201,6 +198,7 @@ pub struct Xlive(Bench, i64, i64);
 
 impl Client {
     /// Create a default instance.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             bench_: Bench::new(),
@@ -208,11 +206,13 @@ impl Client {
     }
 
     /// `mid` is *uid*
+    #[must_use]
     pub fn user(&self, mid: i64) -> User {
         User(self.bench_.clone(), mid)
     }
 
-    /// Renaming for logical. `area` is *parent_area_id*, `sub` is *area_id*.
+    /// Renaming for logical. `area` is *`parent_area_id`*, `sub` is *`area_id`*.
+    #[must_use]
     pub fn xlive(&self, area: i64, sub: i64) -> Xlive {
         Xlive(self.bench_.clone(), area, sub)
     }
@@ -228,6 +228,9 @@ impl User {
     /// See also [*api_info/user:info/info*][api_info/user]
     ///
     /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -236,7 +239,7 @@ impl User {
                 "mid":self.1,
                 "token": "",
                 "platform": "web",
-                "web_location": 1550101,
+                "web_location": 1_550_101,
             }}),
         )
         .await
@@ -245,6 +248,9 @@ impl User {
     /// See also [*api_info/user:info/video*][api_info/user]
     ///
     /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
     pub async fn latest_videos(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -266,6 +272,9 @@ impl Xlive {
     /// Check [*api_info/xlive:info/get_list*][api_info/xlive]
     ///
     /// [api_info/xlive]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/xlive.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
     pub async fn list(&self, pn: i64) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -328,7 +337,7 @@ mod tests {
         let state = bench.state();
         println!("state: {:?}", &state);
         let salt: &String = state.get("wbi_salt").unwrap();
-        println!("wbi_salt: {}", salt);
+        println!("wbi_salt: {salt}");
         assert_eq!(salt.len(), 32);
         Ok(())
     }
@@ -342,10 +351,10 @@ mod tests {
             &bench,
             json!({
                 "query": {
-                    "mid": 213741,
+                    "mid": 213_741,
                 }
             }),
-            1686163791,
+            1_686_163_791,
         );
         assert_eq!(
             opts,
@@ -353,8 +362,8 @@ mod tests {
                 "_uq": "mid=213741&wts=1686163791",
                 "query": {
                     "w_rid": "dc7bb638dc082c354fd9624b72374f3b",
-                    "mid": 213741,
-                    "wts": 1686163791,
+                    "mid": 213_741,
+                    "wts": 1_686_163_791,
                 },
             })
         );
@@ -369,25 +378,25 @@ mod tests {
             &bench,
             json!({
                 "query": {
-                    "mid": 1472906636,
+                    "mid": 1_472_906_636,
                     "token": "",
                     "platform": "web",
-                    "web_location": 1550101,
+                    "web_location": 1_550_101,
                 }
             }),
-            1686230003,
+            1_686_230_003,
         );
         assert_eq!(
             opts,
             json!({
                 "_uq": "mid=1472906636&platform=web&token=&web_location=1550101&wts=1686230003",
                 "query": {
-                    "wts": 1686230003,
+                    "wts": 1_686_230_003,
                     "w_rid": "9946c05f7b3d5a8505a97e1b8daab2be",
-                    "mid": 1472906636,
+                    "mid": 1_472_906_636,
                     "token": "",
                     "platform": "web",
-                    "web_location": 1550101,
+                    "web_location": 1_550_101,
                 },
             })
         );

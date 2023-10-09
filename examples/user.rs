@@ -10,10 +10,10 @@ async fn main() -> Result<()> {
         .init()
         .unwrap();
     let cli = Client::new();
-    let wuyi = cli.user(1472906636);
+    let wuyi = cli.user(1_472_906_636);
     let info = wuyi.info().await?;
-    println!("wuyi info: {}", info);
+    println!("wuyi info: {info}");
     let latest = wuyi.latest_videos().await?;
-    println!("wuyi latest_videos: {}", latest);
+    println!("wuyi latest_videos: {latest}");
     Ok(())
 }
