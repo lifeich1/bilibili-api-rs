@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.75"
-xtaskops = "0.4.2"
+lintd-taskops = { version = "0", path = "../../taskops/lintd-taskops" }
