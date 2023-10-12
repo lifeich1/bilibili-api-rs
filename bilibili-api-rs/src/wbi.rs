@@ -356,7 +356,8 @@ mod tests {
         )
         .await?;
         println!("res: {:?}", &res);
-        assert_eq!(res["code"].as_i64(), Some(0));
+        // "request was banned" is also ok
+        assert!(matches!(res["code"].as_i64(), Some(0 | -412)));
         Ok(())
     }
 
