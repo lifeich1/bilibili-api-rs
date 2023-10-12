@@ -4,3 +4,4 @@ members = [
   "xtask",
 ]
 resolver = "2"
+default-members = ["bilibili-api-rs"]

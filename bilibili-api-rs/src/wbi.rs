@@ -298,6 +298,14 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn init() {
+        env_logger::builder()
+            .is_test(true)
+            .format_timestamp(Some(env_logger::fmt::TimestampPrecision::Micros))
+            .try_init()
+            .ok();
+    }
+
     #[test]
     fn test_wbi_salt_compute() {
         let bench = Bench::new();
@@ -311,6 +319,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_do_req() -> Result<()> {
+        init();
         let res = do_req(
             &Bench::new(),
             json!(["xlive", "info", "get_list"]),
