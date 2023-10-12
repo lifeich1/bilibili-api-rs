@@ -266,6 +266,27 @@ impl User {
         )
         .await
     }
+
+    /// See also [*api_info/user:info/dynamic*][api_info/user]
+    ///
+    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
+    pub async fn recent_posts(&self) -> Result<Json> {
+        do_api_req(
+            &self.0,
+            json!(["user", "info", "dynamic"]),
+            json!({
+                "query": {
+                    "host_uid": self.1,
+                    "offset_dynamic_id": 0,
+                    "need_top": 0,
+                }
+            }),
+        )
+        .await
+    }
 }
 
 impl Xlive {

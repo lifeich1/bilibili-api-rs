@@ -15,5 +15,7 @@ async fn main() -> Result<()> {
     println!("wuyi info: {info}");
     let latest = wuyi.latest_videos().await?;
     println!("wuyi latest_videos: {latest}");
+    let latest = wuyi.recent_posts().await?;
+    println!("wuyi recent_posts: {latest}");
     Ok(())
 }
