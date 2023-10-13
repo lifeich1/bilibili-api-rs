@@ -69,6 +69,8 @@ fn fetch_mock() -> Json {
     tests::MOCK_Q
         .write()
         .expect("failed lock")
+        .entry(std::thread::current().id())
+        .or_insert(None)
         .take()
         .expect("MOCK_Q not filled!!")
 }
@@ -337,14 +339,22 @@ impl Xlive {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
+    use std::thread;
+    use std::thread::ThreadId;
 
     lazy_static::lazy_static! {
-    pub static ref MOCK_Q: Arc<RwLock<Option<Json>>> = Arc::new(RwLock::new(None));
+    pub static ref MOCK_Q: Arc<RwLock<HashMap<ThreadId, Option<Json>>>> = Arc::new(RwLock::new(HashMap::new()));
     }
 
     fn mock_put(json: Json) {
-        MOCK_Q.write().expect("failed lock").replace(json);
+        MOCK_Q
+            .write()
+            .expect("failed lock")
+            .entry(thread::current().id())
+            .or_insert(None)
+            .replace(json);
     }
 
     fn init() {
@@ -465,13 +475,21 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_user() {
-        todo!();
+    #[tokio::test]
+    async fn test_user() {
+        let user = Client::new().user(6655);
+        mock_put(json!({"code":0, "data": "mocking"}));
+        assert_eq!(user.info().await.ok(), Some(json!("mocking")));
+        mock_put(json!({"code":0, "data": "mocking2"}));
+        assert_eq!(user.latest_videos().await.ok(), Some(json!("mocking2")));
+        mock_put(json!({"code":0, "data": "mocking3"}));
+        assert_eq!(user.recent_posts().await.ok(), Some(json!("mocking3")));
     }
 
-    #[test]
-    fn test_xlive() {
-        todo!();
+    #[tokio::test]
+    async fn test_xlive() {
+        let xlive = Client::new().xlive(9, 0);
+        mock_put(json!({"code":0, "data": "mocking"}));
+        assert_eq!(xlive.list(3).await.ok(), Some(json!("mocking")));
     }
 }
