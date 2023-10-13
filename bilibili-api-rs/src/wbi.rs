@@ -462,4 +462,14 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn test_user() {
+        todo!();
+    }
+
+    #[test]
+    fn test_xlive() {
+        todo!();
+    }
 }
