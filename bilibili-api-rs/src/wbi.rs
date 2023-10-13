@@ -65,19 +65,20 @@ fn gen_cookie(bench: &Bench) -> String {
 }
 
 #[cfg(test)]
-fn fetch_mock() -> Json {
+fn fetch_mock() -> Result<Json> {
     tests::MOCK_Q
         .write()
         .expect("failed lock")
         .entry(std::thread::current().id())
         .or_insert(None)
         .take()
-        .expect("MOCK_Q not filled!!")
+        .ok_or_else(|| anyhow::anyhow!("MOCK_Q not filled!"))
 }
 
+#[allow(clippy::unnecessary_wraps)]
 #[cfg(not(test))]
-const fn fetch_mock() -> Json {
-    Json::Null
+const fn fetch_mock() -> Result<Json> {
+    Ok(Json::Null)
 }
 
 async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
@@ -120,7 +121,7 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
     trace!("request sending: {:?}", &req);
     if cfg!(test) && !is_fetch_salt {
         trace!("mock request send");
-        return Ok(fetch_mock());
+        return fetch_mock();
     }
     Ok(serde_json::from_str(&req.send().await?.text().await?)?)
 }
@@ -473,6 +474,20 @@ mod tests {
                 },
             })
         );
+    }
+
+    #[tokio::test]
+    async fn test_do_req_twice_err() {
+        let user = Client::new().user(6655);
+        assert_eq!(user.info().await.ok(), None);
+    }
+
+    #[tokio::test]
+    #[should_panic = "bilibili api reject"]
+    async fn test_bili_api_reject() {
+        let user = Client::default().user(6_916_837);
+        mock_put(json!({"code":-404, "data": "banned user"}));
+        user.info().await.map_err(|e| panic!("{e}")).ok();
     }
 
     #[tokio::test]
