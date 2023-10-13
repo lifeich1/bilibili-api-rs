@@ -79,9 +79,7 @@ const fn fetch_mock() -> Json {
 }
 
 async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
-    if cfg!(test) && !api_path.eq(&json!(["credential", "info", "valid"])) {
-        return Ok(fetch_mock());
-    }
+    let is_fetch_salt = cfg!(test) && api_path.eq(&json!(["credential", "info", "valid"]));
     let data = bench.data();
     let cli = reqwest::Client::new();
     let api = data["api"].at(api_path);
@@ -118,6 +116,10 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
         )
         .query(&opts["query"]);
     trace!("request sending: {:?}", &req);
+    if cfg!(test) && !is_fetch_salt {
+        trace!("mock request send");
+        return Ok(fetch_mock());
+    }
     Ok(serde_json::from_str(&req.send().await?.text().await?)?)
 }
 
