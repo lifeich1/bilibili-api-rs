@@ -64,7 +64,24 @@ fn gen_cookie(bench: &Bench) -> String {
         })
 }
 
+#[cfg(test)]
+fn fetch_mock() -> Json {
+    tests::MOCK_Q
+        .write()
+        .expect("failed lock")
+        .take()
+        .expect("MOCK_Q not filled!!")
+}
+
+#[cfg(not(test))]
+const fn fetch_mock() -> Json {
+    Json::Null
+}
+
 async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
+    if cfg!(test) && !api_path.eq(&json!(["credential", "info", "valid"])) {
+        return Ok(fetch_mock());
+    }
     let data = bench.data();
     let cli = reqwest::Client::new();
     let api = data["api"].at(api_path);
@@ -318,6 +335,15 @@ impl Xlive {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::sync::{Arc, RwLock};
+
+    lazy_static::lazy_static! {
+    pub static ref MOCK_Q: Arc<RwLock<Option<Json>>> = Arc::new(RwLock::new(None));
+    }
+
+    fn mock_put(json: Json) {
+        MOCK_Q.write().expect("failed lock").replace(json);
+    }
 
     fn init() {
         env_logger::builder()
@@ -341,6 +367,10 @@ mod tests {
     #[tokio::test]
     async fn test_do_req() -> Result<()> {
         init();
+        mock_put(json!({
+            "code": 0,
+            "data": "mocking",
+        }));
         let res = do_req(
             &Bench::new(),
             json!(["xlive", "info", "get_list"]),
@@ -356,8 +386,7 @@ mod tests {
         )
         .await?;
         println!("res: {:?}", &res);
-        // "request was banned" is also ok
-        assert!(matches!(res["code"].as_i64(), Some(0 | -412)));
+        assert_eq!(res["code"].as_i64(), Some(0));
         Ok(())
     }
 
@@ -402,6 +431,7 @@ mod tests {
 
     #[test]
     fn test_enc_wbi2() {
+        assert!(cfg!(test));
         let salt = "5a73a9f6609390773b53586cce514c2e";
         let bench = Bench::new();
         bench.commit_state(|s| s.insert("wbi_salt".into(), salt.to_owned()));
