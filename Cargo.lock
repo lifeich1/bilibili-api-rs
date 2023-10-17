@@ -792,9 +792,9 @@ checksum = "a08173bc88b7955d1b3145aa561539096c421ac8debde8cbc3612ec635fee29b"
 
 [[package]]
 name = "lintd-taskops"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b0d67d6adcd020d20dd2b7c2b172624885dacaf496fc424d2cfe0c76b2a842f"
+checksum = "15e21ea684bbd5a102cf614a1e3183f240773f6d35c534ac676798896b7e5242"
 dependencies = [
  "anyhow",
  "clap 4.4.6",
