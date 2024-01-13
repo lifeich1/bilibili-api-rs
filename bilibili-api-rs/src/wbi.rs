@@ -28,18 +28,38 @@ fn api_result_validate(mut resp: Json) -> Result<Json> {
 
 async fn do_req_twice(bench: &Bench, api_path: Json, opts: Json) -> Result<Json> {
     let state = &bench.state;
-    if state.get("wbi_salt").is_none() {
+    let mut mut_stat: Option<StateData> = None;
+
+    let k_domain = "Domain";
+    if state.get(k_domain).is_none() {
+        mut_stat = mut_stat
+            .or_else(|| Some(state.clone()))
+            .map(|s| s.update(k_domain.into(), ".bilibili.com".into()));
+    }
+
+    let k_salt = "wbi_salt";
+    if state.get(k_salt).is_none() {
         debug!("do_req init salt");
-        fetch_wbi_salt(bench).await?;
+        let salt = fetch_wbi_salt(bench).await?;
+        mut_stat = mut_stat
+            .or_else(|| Some(state.clone()))
+            .map(|s| s.update(k_salt.into(), salt));
     }
-    debug!("do_req once");
-    if let Ok(res) = do_req(bench, api_path.clone(), opts.clone()).await {
-        debug!("do_req once done");
-        return Ok(res);
+
+    let k_uvid = "buvid3";
+    if state.get(k_uvid).is_none() {
+        debug!("do_req init uvid");
+        let uvid = fetch_uvid(bench).await?;
+        mut_stat = mut_stat
+            .or_else(|| Some(state.clone()))
+            .map(|s| s.update(k_uvid.into(), uvid));
     }
-    debug!("do_req twice: fetch_wbi_salt");
-    fetch_wbi_salt(bench).await?;
-    debug!("do_req twice");
+
+    if let Some(new_stat) = mut_stat {
+        bench.update_state(new_stat);
+        bail!("Require retry for update state");
+    }
+
     do_req(bench, api_path, opts).await
 }
 
@@ -63,25 +83,8 @@ fn gen_cookie(bench: &Bench) -> String {
         })
 }
 
-#[cfg(test)]
-fn fetch_mock() -> Result<Json> {
-    tests::MOCK_Q
-        .write()
-        .expect("failed lock")
-        .entry(std::thread::current().id())
-        .or_insert(None)
-        .take()
-        .ok_or_else(|| anyhow::anyhow!("MOCK_Q not filled!"))
-}
-
-#[allow(clippy::unnecessary_wraps)]
-#[cfg(not(test))]
-const fn fetch_mock() -> Result<Json> {
-    Ok(Json::Null)
-}
-
 async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
-    let is_fetch_salt = cfg!(test) && api_path.eq(&json!(["credential", "info", "valid"]));
+    debug!("do_req api_path: {:?}", &api_path);
     let data = &bench.data;
     let cli = reqwest::Client::new();
     let api = data["api"].at(api_path);
@@ -117,12 +120,13 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
                 .unwrap(),
         )
         .query(&opts["query"]);
-    trace!("request sending: {:?}", &req);
-    if cfg!(test) && !is_fetch_salt {
-        trace!("mock request send");
-        return fetch_mock();
-    }
-    Ok(serde_json::from_str(&req.send().await?.text().await?)?)
+    trace!("do_req: {:?}", &req);
+    Ok(
+        serde_json::from_str(&req.send().await?.text().await?).map(|resp| {
+            trace!("do_req resp: {:?}", &resp);
+            resp
+        })?,
+    )
 }
 
 fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
@@ -162,7 +166,15 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
     opts
 }
 
-async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
+async fn fetch_uvid(bench: &Bench) -> Result<String> {
+    let mut spi = do_req(bench, json!(["credential", "info", "spi"]), json!({})).await?;
+    let Json::String(uvid) = spi["data"]["b_3"].take() else {
+        bail!("fetch_uvid: b_3 invalid");
+    };
+    Ok(uvid)
+}
+
+async fn fetch_wbi_salt(bench: &Bench) -> Result<String> {
     let nav = do_req(bench, json!(["credential", "info", "valid"]), json!({})).await?;
     let Some(imgurl) = nav["data"]["wbi_img"]["img_url"].as_str() else {
         bail!("fetch_wbi_salt: wbi_img/img_url invalid");
@@ -170,11 +182,7 @@ async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
     let Some(suburl) = nav["data"]["wbi_img"]["sub_url"].as_str() else {
         bail!("fetch_wbi_salt: wbi_img/sub_url invalid");
     };
-    let le = wbi_salt_compute(bench, imgurl, suburl);
-    bench.commit_state(move |s| {
-        s.insert("wbi_salt".into(), le.clone());
-    });
-    Ok(())
+    Ok(wbi_salt_compute(bench, imgurl, suburl))
 }
 
 fn wbi_parse_ae(imgurl: &str, suburl: &str) -> Option<String> {
@@ -244,7 +252,10 @@ impl Client {
 
     fn do_sync(&mut self) {
         match self.rx.try_recv() {
-            Ok(s) => self.bench.state = s,
+            Ok(s) => {
+                trace!("current state: {:?}", &s);
+                self.bench.state = s;
+            }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 panic!("existing client should have health channel")
             }
@@ -289,13 +300,20 @@ impl User {
     pub async fn latest_videos(&self) -> Result<Json> {
         do_api_req(
             &self.0,
-            json!(["user", "info", "video"]),
+            json!(["unstable", "videos"]),
             json!({
                 "query": {
-                    "mid": self.1,
-                    "ps": 30, "tid": 0, "pn": 1,
-                    "order": "pubdate",
-                    "keyword": "",
+                    "mobi_app": "web",
+                    "type": 1,
+                    "biz_id": self.1,
+                    "oid": "",
+                    "otype": 2,
+                    "ps": 2,
+                    "direction": false,
+                    "desc": true,
+                    "sort_field": 1,
+                    "tid": 0,
+                    "with_current": false
                 }
             }),
         )
@@ -353,23 +371,6 @@ impl Xlive {
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::collections::HashMap;
-    use std::sync::{Arc, RwLock};
-    use std::thread;
-    use std::thread::ThreadId;
-
-    lazy_static::lazy_static! {
-    pub static ref MOCK_Q: Arc<RwLock<HashMap<ThreadId, Option<Json>>>> = Arc::new(RwLock::new(HashMap::new()));
-    }
-
-    fn mock_put(json: Json) {
-        MOCK_Q
-            .write()
-            .expect("failed lock")
-            .entry(thread::current().id())
-            .or_insert(None)
-            .replace(json);
-    }
 
     fn init() {
         env_logger::builder()
@@ -377,6 +378,32 @@ mod tests {
             .format_timestamp(Some(env_logger::fmt::TimestampPrecision::Micros))
             .try_init()
             .ok();
+    }
+
+    #[tokio::test]
+    async fn test_cover_all_api() {
+        init();
+        let banned = 328_575_117;
+        let cctv = 222_103_174;
+        let mut cli = Client::new();
+        let banned_info = cli.user(banned).info().await;
+        assert!(banned_info.is_err());
+        assert!(banned_info
+            .unwrap_err()
+            .to_string()
+            .contains("Require retry for update state"));
+        let banned_info = cli.user(banned).info().await;
+        assert!(banned_info.is_err());
+        assert!(banned_info
+            .unwrap_err()
+            .to_string()
+            .contains("bilibili api reject"));
+        assert!(cli.user(cctv).info().await.is_ok());
+        assert!(cli.user(cctv).recent_posts().await.is_ok());
+        assert!(cli.user(cctv).latest_videos().await.is_ok());
+        let area_drug = 1;
+        let type_moe = 530;
+        assert!(cli.xlive(area_drug, type_moe).list(1).await.is_ok());
     }
 
     #[test]
@@ -391,39 +418,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_do_req() -> Result<()> {
-        init();
-        mock_put(json!({
-            "code": 0,
-            "data": "mocking",
-        }));
-        let res = do_req(
-            &Bench::new().0,
-            json!(["xlive", "info", "get_list"]),
-            json!({
-                "query": {
-                    "platform": "web",
-                    "parent_area_id": 9,
-                    "area_id": 0,
-                    "sort_type": "sort_type_291",
-                    "page": 2
-                }
-            }),
-        )
-        .await?;
-        println!("res: {:?}", &res);
-        assert_eq!(res["code"].as_i64(), Some(0));
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_fetch_wbi_salt() -> Result<()> {
         let bench = Bench::new().0;
-        fetch_wbi_salt(&bench).await?;
-        let state = &bench.state;
-        println!("state: {:?}", &state);
-        let salt: &String = state.get("wbi_salt").unwrap();
-        println!("wbi_salt: {salt}");
+        let salt = fetch_wbi_salt(&bench).await?;
         assert_eq!(salt.len(), 32);
         Ok(())
     }
@@ -431,10 +428,8 @@ mod tests {
     #[test]
     fn test_enc_wbi() {
         let salt = "b7ot4is0ba.3cp9fi5:ce0eme/l9d84s";
-        let bench = Bench::new().0;
-        bench.commit_state(|s| {
-            s.insert("wbi_salt".into(), salt.to_owned());
-        });
+        let mut bench = Bench::new().0;
+        bench.state.insert("wbi_salt".into(), salt.to_owned());
         let opts = enc_wbi(
             &bench,
             json!({
@@ -459,12 +454,9 @@ mod tests {
 
     #[test]
     fn test_enc_wbi2() {
-        assert!(cfg!(test));
         let salt = "5a73a9f6609390773b53586cce514c2e";
-        let bench = Bench::new().0;
-        bench.commit_state(|s| {
-            s.insert("wbi_salt".into(), salt.to_owned());
-        });
+        let mut bench = Bench::new().0;
+        bench.state.insert("wbi_salt".into(), salt.to_owned());
         let opts = enc_wbi(
             &bench,
             json!({
@@ -491,37 +483,5 @@ mod tests {
                 },
             })
         );
-    }
-
-    #[tokio::test]
-    async fn test_do_req_twice_err() {
-        let user = Client::new().user(6655);
-        assert_eq!(user.info().await.ok(), None);
-    }
-
-    #[tokio::test]
-    #[should_panic = "bilibili api reject"]
-    async fn test_bili_api_reject() {
-        let user = Client::default().user(6_916_837);
-        mock_put(json!({"code":-404, "data": "banned user"}));
-        user.info().await.map_err(|e| panic!("{e}")).ok();
-    }
-
-    #[tokio::test]
-    async fn test_user() {
-        let user = Client::new().user(6655);
-        mock_put(json!({"code":0, "data": "mocking"}));
-        assert_eq!(user.info().await.ok(), Some(json!("mocking")));
-        mock_put(json!({"code":0, "data": "mocking2"}));
-        assert_eq!(user.latest_videos().await.ok(), Some(json!("mocking2")));
-        mock_put(json!({"code":0, "data": "mocking3"}));
-        assert_eq!(user.recent_posts().await.ok(), Some(json!("mocking3")));
-    }
-
-    #[tokio::test]
-    async fn test_xlive() {
-        let xlive = Client::new().xlive(9, 0);
-        mock_put(json!({"code":0, "data": "mocking"}));
-        assert_eq!(xlive.list(3).await.ok(), Some(json!("mocking")));
     }
 }

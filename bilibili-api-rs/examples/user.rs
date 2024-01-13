@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use bilibili_api_rs::Client;
 
 #[tokio::main]
@@ -10,12 +10,22 @@ async fn main() -> Result<()> {
         .init()
         .unwrap();
     let mut cli = Client::new();
-    let wuyi = 1_472_906_636;
-    let info = cli.user(wuyi).info().await?;
-    println!("wuyi info: {info}");
-    let latest = cli.user(wuyi).latest_videos().await?;
-    println!("wuyi latest_videos: {latest}");
-    let latest = cli.user(wuyi).recent_posts().await?;
-    println!("wuyi recent_posts: {latest}");
+    let mk33 = 210_628;
+    let mut init_cnt = 0;
+    let info = loop {
+        if let Ok(v) = cli.user(mk33).info().await {
+            break v;
+        }
+        init_cnt += 1;
+        if init_cnt > 5 {
+            bail!("init retry too many: {init_cnt}");
+        }
+    };
+    println!("retried {init_cnt} for initialization.");
+    println!("mk33 info: {info}");
+    let latest = cli.user(mk33).latest_videos().await?;
+    println!("mk33 latest_videos: {latest}");
+    let latest = cli.user(mk33).recent_posts().await?;
+    println!("mk33 recent_posts: {latest}");
     Ok(())
 }

@@ -1,0 +1,21 @@
+{
+  "videos": {
+    "url": "https://api.bilibili.com/x/v2/medialist/resource/list",
+    "method": "GET",
+    "verify": false,
+    "params": {
+      "mobi_app": "web",
+      "type": 1,
+      "biz_id": "int: user id",
+      "oid": "int: nil为起始，否则为已获取尾部id",
+      "otype": 2,
+      "ps": "int: 每页项数",
+      "direction": false,
+      "desc": true,
+      "sort_field": 1,
+      "tid": 0,
+      "with_current": false
+    },
+    "comment": "获取'播放全部'列表"
+  }
+}

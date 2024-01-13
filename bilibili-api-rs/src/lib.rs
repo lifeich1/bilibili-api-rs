@@ -39,6 +39,8 @@ struct Bench {
 
 impl Bench {
     pub fn new() -> (Self, mpsc::Receiver<StateData>) {
+        let unstable: Json = serde_json::from_str(include_str!("api_info/unstable.json"))
+            .expect("api_info/unstable.json invalid");
         let user: Json = serde_json::from_str(include_str!("api_info/user.json"))
             .expect("api_info/user.json invalid");
         let live: Json = serde_json::from_str(include_str!("api_info/live.json"))
@@ -64,14 +66,24 @@ impl Bench {
                         "video": video,
                         "xlive": api_xlive,
                         "credential": credential,
+                        "unstable": unstable,
                     },
                     "cookie_state": [
-                        "buvid3"
+                        "buvid3",
+                        "Domain",
+                        "SESSDATA",
+                        "ac_time_value",
+                        "bili_jct",
+                        "DedeUserID",
                     ],
                     "wbi_oe": wbi_oe,
                     "headers": {
                         "REFERER":  "https://www.bilibili.com",
-                        "USER_AGENT": "Mozilla/5.0",
+                        "USER_AGENT": concat!(
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ",
+                            "AppleWebKit/537.36 (KHTML, like Gecko) ",
+                            "Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.54"
+                        ),
                     }
                 })),
                 state,
@@ -81,10 +93,15 @@ impl Bench {
         )
     }
 
-    pub fn commit_state(&self, change: impl Fn(&mut StateData)) {
+    #[allow(dead_code)]
+    pub fn commit_state(&self, change: impl FnOnce(&mut StateData)) {
         let mut s = self.state.clone();
         change(&mut s);
-        if let Err(e) = self.tx.try_send(s) {
+        self.update_state(s);
+    }
+
+    pub fn update_state(&self, state: StateData) {
+        if let Err(e) = self.tx.try_send(state) {
             debug!("bench try_send {e:?}");
         }
     }
