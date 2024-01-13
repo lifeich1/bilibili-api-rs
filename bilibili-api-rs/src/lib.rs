@@ -5,7 +5,8 @@
 //! [Client][crate::wbi::Client].
 //!
 //! Api result is part of response, alike [bilibili-api](https://github.com/Passkou/bilibili-api),
-//! is response["data"]. Invalid response treated as error then bail.
+//! is response["data"]. Invalid response treated as error then bail. *Note that init retries and token
+//! refresh also be treated as error.*
 //!
 //! *High overhead*: to anti-detect, client open one whole new connection in every request.
 //!
@@ -14,9 +15,11 @@
 //! use bilibili_api_rs::Client;
 //! use anyhow::Result;
 //! async fn test_xlive() -> Result<()> {
-//!     let cli = Client::new();
-//!     let xlive = cli.xlive(/*virtual*/9, /*all*/0);
-//!     let lives = xlive.list(2).await?;
+//!     let mut cli = Client::new();
+//!     let area_virtual = 9;
+//!     let type_all = 0;
+//!     cli.xlive(area_virtual, type_all).list(1).await.ok(); // usually retry once for init
+//!     let lives = cli.xlive(area_virtual, type_all).list(2).await?;
 //!     Ok(())
 //! }
 //! ```
