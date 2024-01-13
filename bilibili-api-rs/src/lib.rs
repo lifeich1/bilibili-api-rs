@@ -53,8 +53,7 @@ impl Bench {
             serde_json::from_str(include_str!("wbi_oe.json")).expect("wbi_oe.json invalid"); // this file has to be
                                                                                              // manually maintain now,
                                                                                              // perl tool TODO
-        let buvid3: String = uuid::Uuid::now_v1(&[99, 11, 16, 32, 1, 7]).to_string();
-        let state = StateData::unit("buvid3".into(), buvid3);
+        let state = StateData::new();
         let (tx, rx) = mpsc::channel(1);
         (
             Self {
@@ -172,9 +171,8 @@ mod tests {
             v.at(json!([
                 ["headers", "REFERER"],
                 ["headers", "__must_null__"],
-                ["cookies", "SESSDATA"],
             ])),
-            json!(["https://www.bilibili.com", (), ""])
+            json!(["https://www.bilibili.com", ()])
         );
         assert_eq!(
             v.at(json!(["headers", "REFERER"])),
@@ -200,28 +198,30 @@ mod tests {
         );
     }
 
-    fn json_state(bench: &Bench) -> Json {
-        serde_json::to_value(bench.state.clone()).unwrap()
+    fn json_state(rx: &mut mpsc::Receiver<StateData>) -> Json {
+        rx.try_recv()
+            .ok()
+            .map(serde_json::to_value)
+            .and_then(Result::ok)
+            .unwrap_or(Json::Null)
     }
 
     #[test]
     fn commit_state() {
-        let bench = Bench::new().0;
-        assert_eq!(json_state(&bench), json!({}));
+        let (bench, mut rx) = Bench::new();
         bench.commit_state(|s| {
             s.insert("test".into(), "value".into());
         });
-        assert_eq!(json_state(&bench), json!({"test":"value"}));
+        assert_eq!(json_state(&mut rx), json!({"test":"value"}));
         bench.commit_state(|s| {
             s.insert("test".into(), "modified".into());
         });
-        assert_eq!(json_state(&bench), json!({"test":"modified"}));
+        assert_eq!(json_state(&mut rx), json!({"test":"modified"}));
     }
 
     #[test]
     fn multithread_commit_state() {
-        let bench0 = Bench::new().0;
-        assert_eq!(json_state(&bench0), json!({}));
+        let (bench0, mut rx) = Bench::new();
 
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
@@ -230,16 +230,16 @@ mod tests {
             });
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(json_state(&bench0), json!({"test":"value"}));
+        assert_eq!(json_state(&mut rx), json!({"test":"value"}));
 
-        let bench = bench0.clone();
+        let bench = bench0;
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| {
                 s.insert("test".into(), "modified".into());
             });
         });
         assert!(hdl.join().is_ok());
-        assert_eq!(json_state(&bench0), json!({"test":"modified"}));
+        assert_eq!(json_state(&mut rx), json!({"test":"modified"}));
     }
 
     #[test]
