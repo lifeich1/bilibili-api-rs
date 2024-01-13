@@ -9,13 +9,13 @@ async fn main() -> Result<()> {
         .verbosity(stderrlog::LogLevelNum::Trace)
         .init()
         .unwrap();
-    let cli = Client::new();
-    let wuyi = cli.user(1_472_906_636);
-    let info = wuyi.info().await?;
+    let mut cli = Client::new();
+    let wuyi = 1_472_906_636;
+    let info = cli.user(wuyi).info().await?;
     println!("wuyi info: {info}");
-    let latest = wuyi.latest_videos().await?;
+    let latest = cli.user(wuyi).latest_videos().await?;
     println!("wuyi latest_videos: {latest}");
-    let latest = wuyi.recent_posts().await?;
+    let latest = cli.user(wuyi).recent_posts().await?;
     println!("wuyi recent_posts: {latest}");
     Ok(())
 }

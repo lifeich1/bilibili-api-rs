@@ -1,11 +1,12 @@
 //! WBI means "web bibilili interface".
-use super::{Bench, Lodash};
+use super::{Bench, Lodash, StateData};
 use anyhow::{bail, Result};
 use log::{debug, trace};
 use regex::Regex;
 use reqwest::header::{COOKIE, REFERER, USER_AGENT};
 use serde_json::json;
 use std::collections::btree_map::BTreeMap;
+use tokio::sync::mpsc;
 
 type Json = serde_json::Value;
 
@@ -26,7 +27,7 @@ fn api_result_validate(mut resp: Json) -> Result<Json> {
 }
 
 async fn do_req_twice(bench: &Bench, api_path: Json, opts: Json) -> Result<Json> {
-    let state = bench.state();
+    let state = &bench.state;
     if state.get("wbi_salt").is_none() {
         debug!("do_req init salt");
         fetch_wbi_salt(bench).await?;
@@ -43,18 +44,16 @@ async fn do_req_twice(bench: &Bench, api_path: Json, opts: Json) -> Result<Json>
 }
 
 fn gen_cookie(bench: &Bench) -> String {
-    let data = bench.data();
-    data["cookies"]
-        .as_object()
-        .expect("data[cookies] should be map")
+    let data = &bench.data;
+    let state = &bench.state;
+    data["cookie_state"]
+        .as_array()
+        .expect("data[cookie_state] should be array")
         .iter()
-        .map(|t| {
-            format!(
-                "{}={}",
-                t.0,
-                t.1.as_str().expect("cookie value should be str")
-            )
-        })
+        .map(|x| x.as_str().expect("item of 'cookie_state' should be string"))
+        .map(|k| (k, state.get(k)))
+        .filter_map(|p| p.1.map(|v| (p.0, v)))
+        .map(|p| format!("{}={}", p.0, p.1))
         .fold(String::new(), |acc, s| {
             if acc.is_empty() {
                 s
@@ -83,7 +82,7 @@ const fn fetch_mock() -> Result<Json> {
 
 async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
     let is_fetch_salt = cfg!(test) && api_path.eq(&json!(["credential", "info", "valid"]));
-    let data = bench.data();
+    let data = &bench.data;
     let cli = reqwest::Client::new();
     let api = data["api"].at(api_path);
     if api["wbi"].as_bool().unwrap_or(false) {
@@ -151,7 +150,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
         });
     opts["_uq"] = uq.clone().into();
     opts["query"]["wts"] = ts.into();
-    let state = bench.state();
+    let state = &bench.state;
     opts["query"]["w_rid"] = Json::String(format!(
         "{:x}",
         md5::compute(
@@ -172,7 +171,9 @@ async fn fetch_wbi_salt(bench: &Bench) -> Result<()> {
         bail!("fetch_wbi_salt: wbi_img/sub_url invalid");
     };
     let le = wbi_salt_compute(bench, imgurl, suburl);
-    bench.commit_state(move |s| s.insert("wbi_salt".into(), le.clone()));
+    bench.commit_state(move |s| {
+        s.insert("wbi_salt".into(), le.clone());
+    });
     Ok(())
 }
 
@@ -190,7 +191,7 @@ fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
         imgurl[imgurl.len() - 36..imgurl.len() - 4].to_owned()
             + &suburl[suburl.len() - 36..suburl.len() - 4]
     });
-    let oe: Vec<i64> = bench.data()["wbi_oe"]
+    let oe: Vec<i64> = bench.data["wbi_oe"]
         .as_array()
         .expect("wbi_oe not array")
         .iter()
@@ -205,9 +206,10 @@ fn wbi_salt_compute(bench: &Bench, imgurl: &str, suburl: &str) -> String {
 }
 
 /// The root client base, see also [TOP][crate].
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Client {
-    bench_: Bench,
+    bench: Bench,
+    rx: mpsc::Receiver<StateData>,
 }
 
 /// Remember user id and do GETs.
@@ -222,21 +224,32 @@ impl Client {
     /// Create a default instance.
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            bench_: Bench::new(),
-        }
+        let (bench, rx) = Bench::new();
+        Self { bench, rx }
     }
 
     /// `mid` is *uid*
     #[must_use]
-    pub fn user(&self, mid: i64) -> User {
-        User(self.bench_.clone(), mid)
+    pub fn user(&mut self, mid: i64) -> User {
+        self.do_sync();
+        User(self.bench.clone(), mid)
     }
 
     /// Renaming for logical. `area` is *`parent_area_id`*, `sub` is *`area_id`*.
     #[must_use]
-    pub fn xlive(&self, area: i64, sub: i64) -> Xlive {
-        Xlive(self.bench_.clone(), area, sub)
+    pub fn xlive(&mut self, area: i64, sub: i64) -> Xlive {
+        self.do_sync();
+        Xlive(self.bench.clone(), area, sub)
+    }
+
+    fn do_sync(&mut self) {
+        match self.rx.try_recv() {
+            Ok(s) => self.bench.state = s,
+            Err(mpsc::error::TryRecvError::Disconnected) => {
+                panic!("existing client should have health channel")
+            }
+            _ => (),
+        }
     }
 }
 
@@ -368,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_wbi_salt_compute() {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         let le = wbi_salt_compute(
             &bench,
             "https://i0.hdslb.com/bfs/wbi/e130e5f398924e569b7cca9f4713ec63.png",
@@ -385,7 +398,7 @@ mod tests {
             "data": "mocking",
         }));
         let res = do_req(
-            &Bench::new(),
+            &Bench::new().0,
             json!(["xlive", "info", "get_list"]),
             json!({
                 "query": {
@@ -405,9 +418,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_wbi_salt() -> Result<()> {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         fetch_wbi_salt(&bench).await?;
-        let state = bench.state();
+        let state = &bench.state;
         println!("state: {:?}", &state);
         let salt: &String = state.get("wbi_salt").unwrap();
         println!("wbi_salt: {salt}");
@@ -418,8 +431,10 @@ mod tests {
     #[test]
     fn test_enc_wbi() {
         let salt = "b7ot4is0ba.3cp9fi5:ce0eme/l9d84s";
-        let bench = Bench::new();
-        bench.commit_state(|s| s.insert("wbi_salt".into(), salt.to_owned()));
+        let bench = Bench::new().0;
+        bench.commit_state(|s| {
+            s.insert("wbi_salt".into(), salt.to_owned());
+        });
         let opts = enc_wbi(
             &bench,
             json!({
@@ -446,8 +461,10 @@ mod tests {
     fn test_enc_wbi2() {
         assert!(cfg!(test));
         let salt = "5a73a9f6609390773b53586cce514c2e";
-        let bench = Bench::new();
-        bench.commit_state(|s| s.insert("wbi_salt".into(), salt.to_owned()));
+        let bench = Bench::new().0;
+        bench.commit_state(|s| {
+            s.insert("wbi_salt".into(), salt.to_owned());
+        });
         let opts = enc_wbi(
             &bench,
             json!({

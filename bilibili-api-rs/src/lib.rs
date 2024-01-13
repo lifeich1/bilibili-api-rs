@@ -20,23 +20,25 @@
 //!     Ok(())
 //! }
 //! ```
-use rpds::{RedBlackTreeMap, RedBlackTreeMapSync};
-use std::sync::{Arc, RwLock};
+use log::debug;
+use std::sync::Arc;
+use tokio::sync::mpsc;
 
 pub mod wbi;
 pub use wbi::Client;
 
-type StateData = RedBlackTreeMapSync<String, String>;
+type StateData = im::HashMap<String, String>;
 type Json = serde_json::Value;
 
 #[derive(Clone, Debug)]
 struct Bench {
-    data_: Json,
-    state_: Arc<RwLock<StateData>>,
+    data: Arc<Json>,
+    state: StateData,
+    tx: mpsc::Sender<StateData>,
 }
 
 impl Bench {
-    pub fn new() -> Self {
+    pub fn new() -> (Self, mpsc::Receiver<StateData>) {
         let user: Json = serde_json::from_str(include_str!("api_info/user.json"))
             .expect("api_info/user.json invalid");
         let live: Json = serde_json::from_str(include_str!("api_info/live.json"))
@@ -52,53 +54,39 @@ impl Bench {
                                                                                              // manually maintain now,
                                                                                              // perl tool TODO
         let buvid3: String = uuid::Uuid::now_v1(&[99, 11, 16, 32, 1, 7]).to_string();
-        Self {
-            data_: serde_json::json!({
-                "api": {
-                    "user": user,
-                    "live": live,
-                    "video": video,
-                    "xlive": api_xlive,
-                    "credential": credential,
-                },
-                "wbi_oe": wbi_oe,
-                "cookies" : {
-                    "buvid3": buvid3,
-                    "SESSDATA": "", "bili_jct": "", "DedeUserID": "",
-                },
-                "headers": {
-                    "REFERER":  "https://www.bilibili.com",
-                    "USER_AGENT": "Mozilla/5.0",
-                }
-            }),
-            state_: Arc::new(RwLock::new(RedBlackTreeMap::new_sync())),
-        }
+        let state = StateData::unit("buvid3".into(), buvid3);
+        let (tx, rx) = mpsc::channel(1);
+        (
+            Self {
+                data: Arc::new(serde_json::json!({
+                    "api": {
+                        "user": user,
+                        "live": live,
+                        "video": video,
+                        "xlive": api_xlive,
+                        "credential": credential,
+                    },
+                    "cookie_state": [
+                        "buvid3"
+                    ],
+                    "wbi_oe": wbi_oe,
+                    "headers": {
+                        "REFERER":  "https://www.bilibili.com",
+                        "USER_AGENT": "Mozilla/5.0",
+                    }
+                })),
+                state,
+                tx,
+            },
+            rx,
+        )
     }
 
-    pub const fn data(&self) -> &Json {
-        &self.data_
-    }
-
-    pub fn state(&self) -> StateData {
-        self.state_
-            .read()
-            .expect("persistent state should be always valid")
-            .clone()
-    }
-
-    pub fn commit_state(&self, change: impl Fn(StateData) -> StateData) {
-        loop {
-            let base = self.state();
-            let fastforward = change(base.clone());
-            let mut guard = self
-                .state_
-                .write()
-                .expect("easy sync in commit should not be poisoned");
-            if base == *guard {
-                *guard = fastforward;
-                std::mem::drop(guard);
-                break;
-            }
+    pub fn commit_state(&self, change: impl Fn(&mut StateData)) {
+        let mut s = self.state.clone();
+        change(&mut s);
+        if let Err(e) = self.tx.try_send(s) {
+            debug!("bench try_send {e:?}");
         }
     }
 }
@@ -178,8 +166,8 @@ mod tests {
 
     #[test]
     fn test_lodash_at() {
-        let bench = Bench::new();
-        let v = bench.data();
+        let bench = Bench::new().0;
+        let v = &bench.data;
         assert_eq!(
             v.at(json!([
                 ["headers", "REFERER"],
@@ -196,51 +184,59 @@ mod tests {
 
     #[test]
     fn validate_wbi_user_info() {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         assert_eq!(
-            bench.data()["api"]["user"]["info"]["info"]["wbi"].as_bool(),
+            bench.data["api"]["user"]["info"]["info"]["wbi"].as_bool(),
             Some(true)
         );
     }
 
     #[test]
     fn validate_method_xlive_get_list() {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         assert_eq!(
-            bench.data()["api"]["xlive"]["info"]["get_list"]["method"].as_str(),
+            bench.data["api"]["xlive"]["info"]["get_list"]["method"].as_str(),
             Some("GET")
         );
     }
 
     fn json_state(bench: &Bench) -> Json {
-        serde_json::to_value(bench.state()).unwrap()
+        serde_json::to_value(bench.state.clone()).unwrap()
     }
 
     #[test]
     fn commit_state() {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         assert_eq!(json_state(&bench), json!({}));
-        bench.commit_state(|s| s.insert("test".into(), "value".into()));
+        bench.commit_state(|s| {
+            s.insert("test".into(), "value".into());
+        });
         assert_eq!(json_state(&bench), json!({"test":"value"}));
-        bench.commit_state(|s| s.insert("test".into(), "modified".into()));
+        bench.commit_state(|s| {
+            s.insert("test".into(), "modified".into());
+        });
         assert_eq!(json_state(&bench), json!({"test":"modified"}));
     }
 
     #[test]
     fn multithread_commit_state() {
-        let bench0 = Bench::new();
+        let bench0 = Bench::new().0;
         assert_eq!(json_state(&bench0), json!({}));
 
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
-            bench.commit_state(|s| s.insert("test".into(), "value".into()));
+            bench.commit_state(|s| {
+                s.insert("test".into(), "value".into());
+            });
         });
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&bench0), json!({"test":"value"}));
 
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
-            bench.commit_state(|s| s.insert("test".into(), "modified".into()));
+            bench.commit_state(|s| {
+                s.insert("test".into(), "modified".into());
+            });
         });
         assert!(hdl.join().is_ok());
         assert_eq!(json_state(&bench0), json!({"test":"modified"}));
@@ -248,9 +244,9 @@ mod tests {
 
     #[test]
     fn insure_get_nav_api_no_encwbi() {
-        let bench = Bench::new();
+        let bench = Bench::new().0;
         assert!(matches!(
-            bench.data()["api"]["credential"]["valid"]["wbi"],
+            bench.data["api"]["credential"]["valid"]["wbi"],
             Json::Null | Json::Bool(false)
         ));
     }
