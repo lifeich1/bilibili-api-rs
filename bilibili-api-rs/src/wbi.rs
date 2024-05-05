@@ -1,9 +1,9 @@
 //! WBI means "web bibilili interface".
-use super::{Bench, Lodash, StateData};
+use super::{cred_utils, Bench, Lodash, StateData};
 use anyhow::{bail, Result};
 use log::{debug, trace};
 use regex::Regex;
-use reqwest::header::{COOKIE, REFERER, USER_AGENT};
+use reqwest::header::{CONTENT_TYPE, COOKIE, REFERER, USER_AGENT};
 use serde_json::json;
 use std::collections::btree_map::BTreeMap;
 use tokio::sync::mpsc;
@@ -83,21 +83,14 @@ fn gen_cookie(bench: &Bench) -> String {
         })
 }
 
-async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
-    debug!("do_req api_path: {:?}", &api_path);
-    let data = &bench.data;
-    let cli = reqwest::Client::new();
-    let api = data["api"].at(api_path);
-    if api["wbi"].as_bool().unwrap_or(false) {
-        let ts = chrono::Local::now().timestamp();
-        opts = enc_wbi(bench, opts, ts);
-    }
-    let req = cli
-        .request(
-            api["method"].as_str().unwrap_or("GET").parse().unwrap(),
-            api["url"].as_str().unwrap(),
-        )
-        .header(
+trait AttachHeaders {
+    fn headers_of_bench(self, bench: &Bench) -> Self;
+}
+
+impl AttachHeaders for reqwest::RequestBuilder {
+    fn headers_of_bench(self, bench: &Bench) -> Self {
+        let data = &bench.data;
+        self.header(
             COOKIE,
             gen_cookie(bench)
                 .parse::<reqwest::header::HeaderValue>()
@@ -119,6 +112,24 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
                 .parse::<reqwest::header::HeaderValue>()
                 .unwrap(),
         )
+    }
+}
+
+async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
+    debug!("do_req api_path: {:?}", &api_path);
+    let data = &bench.data;
+    let cli = reqwest::Client::new();
+    let api = data["api"].at(api_path);
+    if api["wbi"].as_bool().unwrap_or(false) {
+        let ts = chrono::Local::now().timestamp();
+        opts = enc_wbi(bench, opts, ts);
+    }
+    let req = cli
+        .request(
+            api["method"].as_str().unwrap_or("GET").parse().unwrap(),
+            api["url"].as_str().unwrap(),
+        )
+        .headers_of_bench(bench)
         .query(&opts["query"]);
     trace!("do_req: {:?}", &req);
     Ok(
@@ -171,7 +182,55 @@ async fn fetch_uvid(bench: &Bench) -> Result<String> {
     let Json::String(uvid) = spi["data"]["b_3"].take() else {
         bail!("fetch_uvid: b_3 invalid");
     };
+    let Json::String(uvid4) = spi["data"]["b_4"].take() else {
+        bail!("fetch_uvid: b_4 invalid");
+    };
+    active_buvid(bench, &uvid, &uvid4).await?;
     Ok(uvid)
+}
+
+async fn active_buvid(bench: &Bench, uvid: &str, uvid4: &str) -> Result<()> {
+    let active_id = format!(
+        "{}{:05}infoc",
+        uuid::Uuid::new_v4().hyphenated(),
+        chrono::Local::now().timestamp_subsec_nanos() % 100_000
+    );
+    let payload = cred_utils::gen_payload(&active_id);
+    let cli = reqwest::Client::new();
+    let api = &bench.data["api"]["credential"]["operate"]["active"];
+    let mut buvid_bench = bench.clone();
+    {
+        let cookie = &mut buvid_bench.state;
+        cookie.insert("buvid3".into(), uvid.into());
+        cookie.insert("buvid4".into(), uvid4.into());
+        cookie.insert("buvid_fp".into(), cred_utils::gen_buvid_fp(&payload)?);
+        cookie.insert("_uuid".into(), active_id);
+    }
+    let req = cli
+        .request(
+            api["method"].as_str().unwrap_or("GET").parse().unwrap(),
+            api["url"].as_str().unwrap(),
+        )
+        .headers_of_bench(&buvid_bench)
+        .header(
+            CONTENT_TYPE,
+            "application/json"
+                .parse::<reqwest::header::HeaderValue>()
+                .unwrap(),
+        )
+        .json(&payload);
+    trace!("active buvid {:?}", &req);
+    let resp: serde_json::Value = serde_json::from_str(&req.send().await?.text().await?)?;
+    trace!("active buvid resp: {:?}", &resp);
+    let code = &resp["code"];
+    if !matches!(code.as_i64(), Some(0)) {
+        bail!(
+            "active buvid failed, code {:?}, msg {:?}",
+            code,
+            resp["msg"]
+        );
+    }
+    Ok(())
 }
 
 async fn fetch_wbi_salt(bench: &Bench) -> Result<String> {
@@ -283,8 +342,6 @@ impl User {
             json!(["user", "info", "info"]),
             json!({"query":{
                 "mid":self.1,
-                "token": "",
-                "platform": "web",
                 "web_location": 1_550_101,
             }}),
         )
@@ -398,7 +455,9 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("bilibili api reject"));
-        assert!(cli.user(cctv).info().await.is_ok());
+        let info = cli.user(cctv).info().await;
+        println!("info: {:?}", &info);
+        assert!(info.is_ok());
         assert!(cli.user(cctv).recent_posts().await.is_ok());
         assert!(cli.user(cctv).latest_videos().await.is_ok());
         let area_drug = 1;
@@ -454,31 +513,27 @@ mod tests {
 
     #[test]
     fn test_enc_wbi2() {
-        let salt = "5a73a9f6609390773b53586cce514c2e";
+        let salt = "ea1db124af3c7062474693fa704f4ff8";
         let mut bench = Bench::new().0;
         bench.state.insert("wbi_salt".into(), salt.to_owned());
         let opts = enc_wbi(
             &bench,
             json!({
                 "query": {
-                    "mid": 1_472_906_636,
-                    "token": "",
-                    "platform": "web",
+                    "mid": 222_103_174,
                     "web_location": 1_550_101,
                 }
             }),
-            1_686_230_003,
+            1_714_929_805,
         );
         assert_eq!(
             opts,
             json!({
-                "_uq": "mid=1472906636&platform=web&token=&web_location=1550101&wts=1686230003",
+                "_uq": "mid=222103174&web_location=1550101&wts=1714929805",
                 "query": {
-                    "wts": 1_686_230_003,
-                    "w_rid": "9946c05f7b3d5a8505a97e1b8daab2be",
-                    "mid": 1_472_906_636,
-                    "token": "",
-                    "platform": "web",
+                    "wts": 1_714_929_805,
+                    "w_rid": "0ef355650a5979e017ccf135200b18f6",
+                    "mid": 222_103_174,
                     "web_location": 1_550_101,
                 },
             })

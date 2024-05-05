@@ -27,6 +27,8 @@ use log::debug;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
+mod cred_utils;
+
 pub mod wbi;
 pub use wbi::Client;
 
@@ -58,7 +60,10 @@ impl Bench {
             serde_json::from_str(include_str!("wbi_oe.json")).expect("wbi_oe.json invalid"); // this file has to be
                                                                                              // manually maintain now,
                                                                                              // perl tool TODO
-        let state = StateData::new();
+        let mut state = StateData::new();
+        state.insert("SESSDATA".into(), "None".into());
+        state.insert("bili_jct".into(), "None".into());
+        state.insert("ac_time_value".into(), "None".into());
         let (tx, rx) = mpsc::channel(1);
         (
             Self {
@@ -73,7 +78,9 @@ impl Bench {
                     },
                     "cookie_state": [
                         "buvid3",
-                        "Domain",
+                        "buvid4",
+                        "buvid_fp",
+                        "_uuid",
                         "SESSDATA",
                         "ac_time_value",
                         "bili_jct",
@@ -230,10 +237,12 @@ mod tests {
     fn commit_state() {
         let (bench, mut rx) = Bench::new();
         bench.commit_state(|s| {
+            s.clear();
             s.insert("test".into(), "value".into());
         });
         assert_eq!(json_state(&mut rx), json!({"test":"value"}));
         bench.commit_state(|s| {
+            s.clear();
             s.insert("test".into(), "modified".into());
         });
         assert_eq!(json_state(&mut rx), json!({"test":"modified"}));
@@ -246,6 +255,7 @@ mod tests {
         let bench = bench0.clone();
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| {
+                s.clear();
                 s.insert("test".into(), "value".into());
             });
         });
@@ -255,6 +265,7 @@ mod tests {
         let bench = bench0;
         let hdl = thread::spawn(move || {
             bench.commit_state(|s| {
+                s.clear();
                 s.insert("test".into(), "modified".into());
             });
         });
