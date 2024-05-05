@@ -4,6 +4,7 @@
 [![crates](https://img.shields.io/crates/v/bilibili-api-rs)](https://crates.io/crates/bilibili-api-rs)
 [![license](https://img.shields.io/crates/l/bilibili-api-rs)](http://www.wtfpl.net/)
 [![docs](https://img.shields.io/docsrs/bilibili-api-rs)](https://docs.rs/bilibili-api-rs)
+[![codecov](https://codecov.io/gh/lifeich1/bilibili-api-rs/graph/badge.svg?token=O6CTJ15600)](https://codecov.io/gh/lifeich1/bilibili-api-rs)
 <a href="https://gitmoji.dev">
   <img src="https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=flat-square" alt="Gitmoji">
 </a>
