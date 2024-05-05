@@ -5,10 +5,11 @@
 //! [Client][crate::wbi::Client].
 //!
 //! Api result is part of response, alike [bilibili-api](https://github.com/Passkou/bilibili-api),
-//! is response["data"]. Invalid response treated as error then bail. *Note that init retries and token
+//! is `response["data"]`. Invalid response treated as error then bail. *Note that init retries and token
 //! refresh also be treated as error.*
 //!
-//! *High overhead*: to anti-detect, client open one whole new connection in every request.
+//! *High overhead*: to anti-detect, client open one whole new connection in every request; must
+//! recreate `User/Xlive/..` helper if failed, better recreate every times but with higher cost.
 //!
 //! ## Example
 //! ```
