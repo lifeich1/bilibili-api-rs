@@ -37,6 +37,7 @@
               rustfmt
               pkg-config
               cargo-watch
+              cargo-edit
             ]
             ++ deps;
 
