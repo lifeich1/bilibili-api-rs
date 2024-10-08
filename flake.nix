@@ -36,6 +36,7 @@
               clippy
               rustfmt
               pkg-config
+              cargo-watch
             ]
             ++ deps;
 

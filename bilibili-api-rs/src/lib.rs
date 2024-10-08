@@ -2,7 +2,7 @@
 //! bilibili-api-rs is a rust library project got inspiration from [bilibili-api](https://github.com/Passkou/bilibili-api).
 //!
 //! Currently "GET" apis only. Api interface `User`, `Xlive` derive from
-//! [Client][crate::wbi::Client].
+//! [Client]
 //!
 //! Api result is part of response, alike [bilibili-api](https://github.com/Passkou/bilibili-api),
 //! is `response["data"]`. Invalid response treated as error then bail. *Note that init retries and token
