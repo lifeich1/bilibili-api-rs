@@ -17,10 +17,6 @@ A rust library project got inspiration from [bilibili-api](https://github.com/Pa
 
 ## Design
 
-data:
-- api
-  - user::{info, channel\_series}, video::info, xlive::info
-
 code:
 - root: exports
   - wbi: access(path, querymap, respschema)
