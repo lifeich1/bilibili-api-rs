@@ -141,9 +141,8 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
         return Ok(Json::String(req.send().await?.text().await?));
     }
     Ok(
-        serde_json::from_str(&req.send().await?.text().await?).map(|resp| {
+        serde_json::from_str(&req.send().await?.text().await?).inspect(|resp| {
             trace!("do_req resp: {:?}", &resp);
-            resp
         })?,
     )
 }
