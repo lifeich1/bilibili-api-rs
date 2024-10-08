@@ -116,6 +116,22 @@ impl Bench {
             debug!("bench try_send {e:?}");
         }
     }
+
+    pub fn get_room_id<T: std::fmt::Display>(&self, uid: T) -> Option<&String> {
+        self.state.get(&format!("room_id:{uid}"))
+    }
+
+    pub fn set_room_id<U, V>(&self, uid: U, room: &V)
+    where
+        U: std::fmt::Display,
+        V: ToString,
+    {
+        let k = format!("room_id:{uid}");
+        let v = room.to_string();
+        self.commit_state(|sto| {
+            sto.insert(k, v);
+        });
+    }
 }
 
 /// Lodash-like get helper, implemented for `serde_json`

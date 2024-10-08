@@ -17,5 +17,28 @@
       "with_current": false
     },
     "comment": "获取'播放全部'列表"
+  },
+  "card": {
+    "url": "https://api.bilibili.com/x/web-interface/card",
+    "method": "GET",
+    "verify": false,
+    "params": {
+      "mid": "int: user id",
+      "photo": 1
+    },
+    "comment": "获取用户标识卡"
+  },
+  "room_search": {
+    "url": "https://search.bilibili.com/live",
+    "method": "GET",
+    "verify": false,
+    "params": {
+      "keyword": "str: nickname",
+      "from_source": "webtop_search",
+      "spm_id_from": "333.999",
+      "search_source": 5
+    },
+    "raw_content": true,
+    "comment": "html过滤获取相关room id"
   }
 }

@@ -43,6 +43,10 @@
           RUST_SRC_PATH = "${toolchain.rustLibSrc}";
 
           shellHook = ''
+            alias x='cargo xtask'
+            if [ -f Session.vim ]; then
+              exec nvim -S Session.vim
+            fi
             cargo --version
             exec $SHELL
           '';

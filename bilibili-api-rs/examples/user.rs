@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let mk33 = 210_628;
     let mut init_cnt = 0;
     let info = loop {
-        if let Ok(v) = cli.user(mk33).info().await {
+        if let Ok(v) = cli.user(mk33).card().await {
             break v;
         }
         init_cnt += 1;
@@ -27,5 +27,10 @@ async fn main() -> Result<()> {
     println!("mk33 latest_videos: {latest}");
     let latest = cli.user(mk33).recent_posts().await?;
     println!("mk33 recent_posts: {latest}");
+    let maybe_not_found = cli.user(mk33).live_info().await;
+    println!("mk33 live_info: {maybe_not_found:?}");
+    cli.user(mk33).room_id(5229);
+    let latest = cli.user(mk33).live_info().await?;
+    println!("mk33 live_info: {latest}");
     Ok(())
 }

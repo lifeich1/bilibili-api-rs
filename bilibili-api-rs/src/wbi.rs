@@ -1,11 +1,12 @@
 //! WBI means "web bibilili interface".
 use super::{cred_utils, Bench, Lodash, StateData};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use log::{debug, trace};
 use regex::Regex;
 use reqwest::header::{CONTENT_TYPE, COOKIE, REFERER, USER_AGENT};
 use serde_json::json;
 use std::collections::btree_map::BTreeMap;
+use std::collections::HashSet;
 use tokio::sync::mpsc;
 
 type Json = serde_json::Value;
@@ -15,6 +16,10 @@ async fn do_api_req(bench: &Bench, api_path: Json, opts: Json) -> Result<Json> {
 }
 
 fn api_result_validate(mut resp: Json) -> Result<Json> {
+    if matches!(resp, Json::String(_)) {
+        trace!("plaintext response bypass api_result_validate");
+        return Ok(resp);
+    }
     if matches!(resp["code"].as_i64(), Some(0)) {
         Ok(resp["data"].take())
     } else {
@@ -132,6 +137,9 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
         .headers_of_bench(bench)
         .query(&opts["query"]);
     trace!("do_req: {:?}", &req);
+    if api["raw_content"].as_bool().unwrap_or(false) {
+        return Ok(Json::String(req.send().await?.text().await?));
+    }
     Ok(
         serde_json::from_str(&req.send().await?.text().await?).map(|resp| {
             trace!("do_req resp: {:?}", &resp);
@@ -336,6 +344,7 @@ impl User {
     ///
     /// # Errors
     /// Throw network errors or api errors.
+    #[deprecated = "WBI is stateful protected. Replace it with card/live_info"]
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -348,9 +357,9 @@ impl User {
         .await
     }
 
-    /// See also [*api_info/user:info/video*][api_info/user]
+    /// See also [*api_info/unstable:videos*][api_info/unstable]
     ///
-    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -396,6 +405,112 @@ impl User {
             }),
         )
         .await
+    }
+
+    /// See also [*api_info/unstable:card*][api_info/unstable]
+    ///
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
+    pub async fn card(&self) -> Result<Json> {
+        do_api_req(
+            &self.0,
+            json!(["unstable", "card"]),
+            json!({
+                "query": {
+                    "mid": self.1,
+                    "photo": 1,
+                }
+            }),
+        )
+        .await
+    }
+
+    /// Invoke `search_room` if room id not found, otherwise query room info.
+    /// See also [*api_info/live:info/room_info*][api_info/live]
+    ///
+    /// [api_info/live]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/live.json
+    ///
+    /// # Errors
+    /// Throw network errors or api errors.
+    pub async fn live_info(&self) -> Result<Json> {
+        let Some(room_id) = self.0.get_room_id(self.1) else {
+            let room_id = self.search_room().await?;
+            self.0.set_room_id(self.1, &room_id);
+            bail!("init room id of uid {}: {}", self.1, room_id);
+        };
+        do_api_req(
+            &self.0,
+            json!(["live", "info", "room_info"]),
+            json!({
+                "query": {
+                    "room_id": room_id,
+                }
+            }),
+        )
+        .await
+    }
+
+    /// External init room id for user.
+    pub fn room_id(&self, id: i64) {
+        self.0.set_room_id(self.1, &id);
+    }
+
+    /// Search room of user and filter check with room play info.
+    /// See also [*api_info/unstable:room_search*][api_info/unstable]
+    ///
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
+    ///
+    /// # Errors
+    /// Mostly if live stream stopped. Otherwise network errors or api errors.
+    ///
+    /// # Panics
+    /// Internal failures.
+    pub async fn search_room(&self) -> Result<String> {
+        let card = self.card().await?;
+        let html = do_api_req(
+            &self.0,
+            json!(["unstable", "room_search"]),
+            json!({
+                "query": {
+                    "keyword": card["card"]["name"],
+                    "from_source": "webtop_search",
+                    "spm_id_from": "333.999",
+                    "search_source": 5
+                }
+            }),
+        )
+        .await
+        .context("api room_search")?;
+        trace!("search room html: {html:?}");
+        let html_txt = html
+            .as_str()
+            .expect("api_info/unstable:room_search result must be plaintext");
+        let re = Regex::new(r#"href="//live\.bilibili\.com/(\d+)\?live_from"#)
+            .expect("search room html regex must ok");
+        let mut rid_set: HashSet<String> = HashSet::new();
+        for (_, [room_id]) in re.captures_iter(html_txt).map(|c| c.extract()) {
+            rid_set.insert(room_id.to_owned());
+        }
+        for room_id in rid_set {
+            if let Ok(check) = do_api_req(
+                &self.0,
+                json!(["live", "info", "room_play_info"]),
+                json!({
+                    "query": {
+                        "room_id": room_id,
+                    }
+                }),
+            )
+            .await
+            {
+                if matches!(check["uid"].as_i64(), Some(id) if id == self.1) {
+                    return Ok(room_id.clone());
+                }
+            };
+        }
+        bail!("live room not found, mostly live closed, uid:{}", self.1)
     }
 }
 
@@ -443,23 +558,43 @@ mod tests {
         let banned = 328_575_117;
         let cctv = 222_103_174;
         let mut cli = Client::new();
-        let banned_info = cli.user(banned).info().await;
+        let banned_info = cli.user(banned).card().await;
         assert!(banned_info.is_err());
         assert!(banned_info
             .unwrap_err()
             .to_string()
             .contains("Require retry for update state"));
-        let banned_info = cli.user(banned).info().await;
-        assert!(banned_info.is_err());
-        assert!(banned_info
-            .unwrap_err()
-            .to_string()
-            .contains("bilibili api reject"));
-        let info = cli.user(cctv).info().await;
-        println!("info: {:?}", &info);
+        let banned_info = cli.user(banned).card().await;
+        assert!(banned_info.is_ok());
+        println!("banned_info: {banned_info:?}");
+        assert!(matches!(
+            banned_info.unwrap()["card"]["spacesta"].as_i64(),
+            Some(-2)
+        ));
+        let info = cli.user(cctv).card().await;
         assert!(info.is_ok());
         assert!(cli.user(cctv).recent_posts().await.is_ok());
         assert!(cli.user(cctv).latest_videos().await.is_ok());
+
+        let study24h = 3_546_660_198_156_783;
+        let info = cli.user(study24h).search_room().await;
+        println!("info: {:?}", &info);
+        assert!(info.is_ok());
+        assert_eq!(info.ok(), Some("32458377".to_owned()));
+
+        let info = cli.user(study24h).live_info().await;
+        assert!(info.is_err());
+        assert!(info
+            .unwrap_err()
+            .to_string()
+            .contains("init room id of uid"));
+
+        let info = cli.user(study24h).live_info().await;
+        assert!(info.is_ok());
+        let info = info.unwrap();
+        assert_eq!(info["room_info"]["live_status"], json!(1));
+        assert_eq!(info["room_info"]["room_id"], json!(32_458_377));
+
         let area_drug = 1;
         let type_moe = 530;
         assert!(cli.xlive(area_drug, type_moe).list(1).await.is_ok());
