@@ -377,7 +377,7 @@ impl Default for Client {
 impl User {
     /// See also [*api_info/user:info/info*][api_info/user]
     ///
-    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/user.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -395,7 +395,7 @@ impl User {
 
     /// See also [*api_info/unstable:videos*][api_info/unstable]
     ///
-    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/unstable.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -424,7 +424,7 @@ impl User {
 
     /// See also [*api_info/user:info/dynamic*][api_info/user]
     ///
-    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/user.json
+    /// [api_info/user]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/user.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -445,7 +445,7 @@ impl User {
 
     /// See also [*api_info/unstable:card*][api_info/unstable]
     ///
-    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/unstable.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -466,7 +466,7 @@ impl User {
     /// Invoke `search_room` if room id not found, otherwise query room info.
     /// See also [*api_info/live:info/room_info*][api_info/live]
     ///
-    /// [api_info/live]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/live.json
+    /// [api_info/live]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/live.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
@@ -496,7 +496,7 @@ impl User {
     /// Search room of user and filter check with room play info.
     /// See also [*api_info/unstable:room_search*][api_info/unstable]
     ///
-    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/unstable.json
+    /// [api_info/unstable]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/unstable.json
     ///
     /// # Errors
     /// Mostly if live stream stopped. Otherwise network errors or api errors.
@@ -553,7 +553,7 @@ impl User {
 impl Xlive {
     /// Check [*api_info/xlive:info/get_list*][api_info/xlive]
     ///
-    /// [api_info/xlive]: https://github.com/lifeich1/bilibili-api-rs/blob/master/src/api_info/xlive.json
+    /// [api_info/xlive]: https://github.com/lifeich1/bilibili-api-rs/blob/master/bilibili-api-rs/src/api_info/xlive.json
     ///
     /// # Errors
     /// Throw network errors or api errors.
