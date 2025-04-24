@@ -16,7 +16,7 @@
       "verify": true
     },
     "name_to_uid": {
-      "url": "https://api.vc.bilibili.com/dynamic_mix/v1/dynamic_mix/name_to_uid",
+      "url": "https://api.bilibili.com/x/polymer/web-dynamic/v1/name-to-uid",
       "method": "GET",
       "verify": false,
       "params": {
@@ -46,8 +46,10 @@
       "method": "GET",
       "verify": false,
       "wbi": true,
+      "wbi2": true,
       "params": {
-        "mid": "int: uid"
+        "mid": "int: uid",
+        "w_webid": "str: w_webid"
       },
       "comment": "用户基本信息"
     },
@@ -122,7 +124,8 @@
       "verify": false,
       "wbi": true,
       "params": {
-        "mid": "int: uid"
+        "mid": "int: uid",
+        "w_webid": "str: w_webid"
       },
       "comment": "直播间基本信息"
     },
@@ -131,16 +134,14 @@
       "method": "GET",
       "verify": false,
       "wbi": true,
+      "wbi2": true,
       "params": {
         "mid": "int: uid",
         "ps": "const int: 30",
         "tid": "int: 分区 ID，0 表示全部",
         "pn": "int: 页码",
         "keyword": "str: 关键词，可为空",
-        "order": "str: pubdate 上传日期，click 播放量，stow 收藏量",
-        "dm_img_list": "[]",
-        "dm_img_str": "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ",
-        "dm_cover_img_str": "QU5HTEUgKEludGVsLCBJbnRlbChSKSBVSEQgR3JhcGhpY3MgNjMwICgweDAwMDAzRTlCKSBEaXJlY3QzRDExIHZzXzVfMCBwc181XzAsIEQzRDExKUdvb2dsZSBJbmMuIChJbnRlbC"
+        "w_webid": "str: w_webid"
       },
       "comment": "搜索用户视频"
     },
@@ -235,11 +236,18 @@
       "url": "https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/space",
       "method": "GET",
       "verify": false,
+      "wbi": true,
+      "wbi2": true,
       "params": {
         "host_mid": "int: uid",
         "offset": "int: 动态偏移用，第一页为 0",
         "timezone_offset": "int: -400",
-        "features": "str: itemOpusStyle"
+        "features": "str: itemOpusStyle",
+        "x-bili-device-req-json": {
+          "platform": "str: sweb",
+          "device": "str: pc"
+        },
+        "x-bili-web-req-json": { "spm_id": "str: 333.1368" }
       },
       "comment": "用户动态信息"
     },
@@ -362,7 +370,7 @@
       "comment": "用户浏览历史记录"
     },
     "channel_list": {
-      "url": "https://api.bilibili.com/x/polymer/space/seasons_series_list",
+      "url": "https://api.bilibili.com/x/polymer/web-space/seasons_series_list",
       "method": "GET",
       "verify": false,
       "params": {
@@ -385,7 +393,7 @@
       "comment": "查看列表内视频（旧版）"
     },
     "channel_video_season": {
-      "url": "https://api.bilibili.com/x/polymer/space/seasons_archives_list",
+      "url": "https://api.bilibili.com/x/polymer/web-space/seasons_archives_list",
       "method": "GET",
       "verify": false,
       "params": {
@@ -522,6 +530,19 @@
       "verify": true,
       "wbi": true,
       "comment": "获取与某用户的关系"
+    },
+    "opus": {
+      "url": "https://api.bilibili.com/x/polymer/web-dynamic/v1/opus/feed/space",
+      "method": "GET",
+      "wbi": true,
+      "params": {
+        "host_mid": "int: uid",
+        "page": "int: 页码 非必要，且貌似对结果影响不大",
+        "offset": "int: 动态偏移用，第一页为空",
+        "type": "str: all / article / dynamic",
+        "web_location": "333.1387",
+        "w_webid": "str: w_webid"
+      }
     }
   },
   "operate": {

@@ -93,7 +93,7 @@
       "comment": "分 P 列表"
     },
     "playurl": {
-      "url": "https://api.bilibili.com/x/player/playurl",
+      "url": "https://api.bilibili.com/x/player/wbi/playurl",
       "method": "GET",
       "verify": false,
       "params": {
@@ -167,14 +167,17 @@
       "comment": "获取收藏夹列表信息，用于收藏操作"
     },
     "get_player_info": {
-      "url": "https://api.bilibili.com/x/player/v2",
+      "url": "https://api.bilibili.com/x/player/wbi/v2",
       "method": "GET",
       "verify": true,
+      "wbi": true,
+      "wbi2": true,
       "data": {
         "aid": "int: av 号。与 bvid 任选其一",
         "cid": "int: 分 P id",
-        "bvid": "int: bv 号。与 aid 任选其一",
-        "ep_id": "int: 番剧分集 id"
+        "ep_id": "int: 番剧分集 id",
+        "isGaiaAvoided": "bool: false",
+        "web_location": "int: 1315873"
       },
       "comment": "获取视频上一次播放的记录，字幕和地区信息。需要 分集的 cid, 返回数据中含有json字幕的链接"
     },
@@ -221,7 +224,7 @@
     },
     "video_online_broadcast_servers": {
       "method": "GET",
-      "verify": true,
+      "verify": false,
       "url": "https://api.bilibili.com/x/web-interface/broadcast/servers?platform=pc",
       "comment": "获取视频在线人数实时监测服务器列表"
     },
@@ -389,9 +392,10 @@
   },
   "danmaku": {
     "get_danmaku": {
-      "url": "https://api.bilibili.com/x/v2/dm/web/seg.so",
+      "url": "https://api.bilibili.com/x/v2/dm/wbi/web/seg.so",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "oid": "int: video_info 中的 cid，即分 P 的编号",
         "type": "const int: 1",

@@ -4,6 +4,7 @@
       "url": "https://api.live.bilibili.com/xlive/web-interface/v1/second/getList",
       "method": "GET",
       "verify": false,
+      "wbi": true,
       "params": {
         "platform": "const str: web",
         "parent_area_id": "int: 大分区号",
