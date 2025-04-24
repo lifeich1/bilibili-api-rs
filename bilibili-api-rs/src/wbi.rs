@@ -575,11 +575,11 @@ mod tests {
         assert!(cli.user(cctv).recent_posts().await.is_ok());
         assert!(cli.user(cctv).latest_videos().await.is_ok());
 
-        let study24h = 3_546_660_198_156_783;
+        let study24h = 1_685_650_605;
         let info = cli.user(study24h).search_room().await;
         println!("info: {:?}", &info);
         assert!(info.is_ok());
-        assert_eq!(info.ok(), Some("32458377".to_owned()));
+        assert_eq!(info.ok(), Some("27519423".to_owned()));
 
         let info = cli.user(study24h).live_info().await;
         assert!(info.is_err());
@@ -592,7 +592,7 @@ mod tests {
         assert!(info.is_ok());
         let info = info.unwrap();
         assert_eq!(info["room_info"]["live_status"], json!(1));
-        assert_eq!(info["room_info"]["room_id"], json!(32_458_377));
+        assert_eq!(info["room_info"]["room_id"], json!(27_519_423));
 
         let area_drug = 1;
         let type_moe = 530;
