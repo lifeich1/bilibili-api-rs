@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let mk33 = 210_628;
     let mut init_cnt = 0;
     let info = loop {
-        if let Ok(v) = cli.user(mk33).card().await {
+        if let Ok(v) = cli.user(mk33).info().await {
             break v;
         }
         init_cnt += 1;

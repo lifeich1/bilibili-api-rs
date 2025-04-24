@@ -125,6 +125,10 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
     let data = &bench.data;
     let cli = reqwest::Client::new();
     let api = data["api"].at(api_path);
+    if api["wbi2"].as_bool().unwrap_or(false) {
+        trace!("use wbi2");
+        opts = enc_wbi2(bench, opts);
+    }
     if api["wbi"].as_bool().unwrap_or(false) {
         let ts = chrono::Local::now().timestamp();
         opts = enc_wbi(bench, opts, ts);
@@ -147,6 +151,39 @@ async fn do_req(bench: &Bench, api_path: Json, mut opts: Json) -> Result<Json> {
     )
 }
 
+#[allow(clippy::cast_sign_loss)]
+fn sample2_from_a_to_k(seed: &mut i64) -> Json {
+    if *seed < 0 {
+        *seed = -*seed;
+    }
+    let mut u: u32 = (*seed % 11) as u32;
+    *seed /= 11;
+    let mut v: u32 = (*seed % 10) as u32;
+    *seed /= 10;
+    if v >= u {
+        v += 1;
+    }
+    let cap_a = 'A' as u32;
+    u += cap_a;
+    v += cap_a;
+    format!(
+        "{}{}",
+        char::from_u32(u).unwrap_or('A'),
+        char::from_u32(v).unwrap_or('A')
+    )
+    .into()
+}
+
+fn enc_wbi2(_bench: &Bench, mut opts: Json) -> Json {
+    let q = &mut opts["query"];
+    q["dm_img_list"] = "[]".into();
+    q["dm_img_inter"] = r#"{"ds":[],"wh":[0,0,0],"of":[0,0,0]}"#.into();
+    let mut ts = chrono::Local::now().timestamp();
+    q["dm_img_str"] = sample2_from_a_to_k(&mut ts);
+    q["dm_cover_img_str"] = sample2_from_a_to_k(&mut ts);
+    opts
+}
+
 fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
     let mut qs: BTreeMap<&str, String> = BTreeMap::new();
     qs.insert("wts", ts.to_string());
@@ -162,7 +199,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
     }
     let uq: String = qs
         .iter()
-        .map(|t| format!("{}={}", t.0, t.1))
+        .map(|t| format!("{}={}", t.0, urlencoding::encode(t.1)))
         .fold(String::new(), |acc, q| {
             if acc.is_empty() {
                 q
@@ -173,6 +210,7 @@ fn enc_wbi(bench: &Bench, mut opts: Json, ts: i64) -> Json {
     opts["_uq"] = uq.clone().into();
     opts["query"]["wts"] = ts.into();
     let state = &bench.state;
+    trace!("uq: {}", &uq);
     opts["query"]["w_rid"] = Json::String(format!(
         "{:x}",
         md5::compute(
@@ -343,7 +381,6 @@ impl User {
     ///
     /// # Errors
     /// Throw network errors or api errors.
-    #[deprecated = "WBI is stateful protected. Replace it with card/live_info"]
     pub async fn info(&self) -> Result<Json> {
         do_api_req(
             &self.0,
@@ -574,6 +611,9 @@ mod tests {
         assert!(info.is_ok());
         assert!(cli.user(cctv).recent_posts().await.is_ok());
         assert!(cli.user(cctv).latest_videos().await.is_ok());
+
+        let info = cli.user(cctv).info().await;
+        assert!(info.is_ok());
 
         let study24h = 1_685_650_605;
         let info = cli.user(study24h).search_room().await;
